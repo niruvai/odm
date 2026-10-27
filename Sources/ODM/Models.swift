@@ -173,6 +173,8 @@ final class DownloadItem: ObservableObject, Identifiable {
     var videoQuality: String
     /// How many automatic retries a failing video has used (not saved).
     var videoAttempt = 0
+    /// Open a progress window when this download next starts (set for user/browser actions).
+    var wantsWindow = false
     /// Changes on every start/pause so stale engine events can be ignored.
     var runToken = UUID()
 

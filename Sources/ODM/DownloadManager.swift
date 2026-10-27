@@ -60,6 +60,7 @@ final class DownloadManager: ObservableObject {
             dateAdded: Date(), dateCompleted: nil, errorMessage: nil,
             kind: resolvedKind, videoQuality: quality ?? Prefs.videoQuality)
         let item = DownloadItem(record: record)
+        item.wantsWindow = startNow
         items.insert(item, at: 0)
         changed()
         if startNow { schedule() }
@@ -111,6 +112,10 @@ final class DownloadManager: ObservableObject {
     func start(_ item: DownloadItem) {
         guard engines[item.id] == nil, videoEngines[item.id] == nil,
               item.status != .completed, !item.status.isActive else { return }
+        if item.wantsWindow {
+            item.wantsWindow = false
+            ProgressWindows.shared.show(item)
+        }
         if item.kind == .video {
             item.videoAttempt = 0
             startVideo(item)
@@ -380,6 +385,7 @@ final class DownloadManager: ObservableObject {
 
     func resume(_ item: DownloadItem) {
         guard item.status == .paused || item.status == .failed || item.status == .queued else { return }
+        item.wantsWindow = true
         start(item)
     }
 
@@ -411,6 +417,7 @@ final class DownloadManager: ObservableObject {
     }
 
     func remove(_ toRemove: [DownloadItem], deleteFiles: Bool) {
+        for item in toRemove { ProgressWindows.shared.close(item.id) }
         for item in toRemove {
             item.runToken = UUID()
             stopEngines(for: item)

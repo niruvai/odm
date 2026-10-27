@@ -149,6 +149,7 @@ struct ContentView: View {
         if picked.count == 1, let item = picked.first {
             Button(item.status == .completed ? "Open" : "Show Partial File") { manager.open(item) }
             Button("Show in Finder") { manager.reveal(item) }
+            Button("Show Progress Window") { ProgressWindows.shared.show(item, force: true) }
             Button("Copy Link") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(item.url, forType: .string)

@@ -10,6 +10,7 @@ enum Prefs {
     static let folderKey = "downloadFolder"
     static let categorizeKey = "sortIntoCategoryFolders"
     static let notifyKey = "notifyOnComplete"
+    static let showProgressWindowKey = "showProgressWindow"
     static let videoQualityKey = "defaultVideoQuality"
     static let browserCookiesKey = "videoUseChromeCookies"
 
@@ -26,6 +27,7 @@ enum Prefs {
             folderKey: defaultFolder,
             categorizeKey: true,
             notifyKey: true,
+            showProgressWindowKey: true,
             videoQualityKey: "1080",
         ])
     }
@@ -34,6 +36,7 @@ enum Prefs {
     static var maxConcurrent: Int { min(10, max(1, UserDefaults.standard.integer(forKey: concurrentKey))) }
     static var categorize: Bool { UserDefaults.standard.bool(forKey: categorizeKey) }
     static var notify: Bool { UserDefaults.standard.bool(forKey: notifyKey) }
+    static var showProgressWindow: Bool { UserDefaults.standard.bool(forKey: showProgressWindowKey) }
     static var videoQuality: String { UserDefaults.standard.string(forKey: videoQualityKey) ?? "1080" }
     static var useBrowserCookies: Bool { UserDefaults.standard.bool(forKey: browserCookiesKey) }
     static var downloadFolder: String {

@@ -187,6 +187,9 @@ struct DetailPanel: View {
             case .completed:
                 Button { manager.open(item) } label: { Label("Open", systemImage: "arrow.up.forward.app") }
             }
+            Button { ProgressWindows.shared.show(item, force: true) } label: {
+                Label("Progress Window", systemImage: "macwindow")
+            }
             Button { manager.reveal(item) } label: { Label("Show in Finder", systemImage: "folder") }
         }
         .controlSize(.small)
@@ -255,6 +258,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.folderKey) private var folder = Prefs.defaultFolder
     @AppStorage(Prefs.categorizeKey) private var categorize = true
     @AppStorage(Prefs.notifyKey) private var notify = true
+    @AppStorage(Prefs.showProgressWindowKey) private var showProgressWindow = true
 
     var body: some View {
         TabView {
@@ -275,6 +279,7 @@ struct SettingsView: View {
                 }
                 Toggle("Sort into folders by type (Video, Music, Programs…)", isOn: $categorize)
                 Toggle("Notify and play a sound when a download finishes", isOn: $notify)
+                Toggle("Show a progress window for each download", isOn: $showProgressWindow)
             }
             .padding()
             .tabItem { Label("General", systemImage: "gearshape") }
