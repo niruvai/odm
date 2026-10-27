@@ -301,6 +301,9 @@ struct SettingsView: View {
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .tabItem { Label("Browser", systemImage: "globe") }
+
+            AboutView()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 560, height: 400)
     }

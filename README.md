@@ -113,6 +113,16 @@ ChromeExtension/         browser extension (Manifest V3)
 build.sh                 builds, signs and installs ODM.app
 ```
 
+## Author
+
+**ODM is made by Nirob Islam.**
+
+- Website: https://www.nirobislam.com/en/
+- Facebook: https://www.facebook.com/mdnurunnabiislamniroob
+- Instagram: https://www.instagram.com/niru_bhai_0/
+
+If you share, fork or build on ODM, please keep the author's name and the license notice.
+
 ## License
 
-MIT — see [LICENSE](LICENSE). yt-dlp is downloaded separately at runtime and has its own license (Unlicense).
+MIT — © 2026 Nirob Islam, see [LICENSE](LICENSE). The copyright notice and author credit must be kept in copies and modified versions. yt-dlp is downloaded separately at runtime and has its own license (Unlicense).

@@ -19,6 +19,8 @@
   #grab { flex: 1; font: inherit; font-weight: 600; padding: 6px 8px; border: 0; border-radius: 6px; background: #1a5ae6; color: #fff; cursor: pointer; }
   #grab:disabled { opacity: .5; cursor: default; }
   .small { font-size: 11.5px; color: #777; margin-top: 6px; min-height: 14px; }
+  .by { margin-top: 10px; font-size: 11px; color: #999; text-align: center; }
+  .by a { color: #1a5ae6; text-decoration: none; }
   @media (prefers-color-scheme: dark) { body { background: #242424; color: #eee; } .status, p { color: #aaa; } }
 </style>
 </head>
@@ -42,6 +44,7 @@
     <div id="grabStatus" class="small"></div>
   </div>
   <p>When the app is closed, Chrome downloads files itself as usual. Right-click any link → “Download with ODM”.</p>
+  <div class="by">ODM by <a href="https://www.nirobislam.com/en/" target="_blank">Nirob Islam</a></div>
   <script src="popup.js"></script>
 </body>
 </html>

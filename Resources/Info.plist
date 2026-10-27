@@ -7,7 +7,7 @@
     <key>CFBundleDisplayName</key>
     <string>ODM</string>
     <key>NSHumanReadableCopyright</key>
-    <string>ODM — Open Source Download Manager. MIT License.</string>
+    <string>© 2026 Nirob Islam. ODM — Open Source Download Manager. MIT License.</string>
     <key>CFBundleIdentifier</key>
     <string>app.odm.ODM</string>
     <key>CFBundleExecutable</key>

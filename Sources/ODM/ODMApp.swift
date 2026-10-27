@@ -13,6 +13,9 @@ struct ODMApp: App {
                 .frame(minWidth: 860, minHeight: 480)
         }
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About ODM") { Author.showAboutPanel() }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Add Download…") {
                     NotificationCenter.default.post(name: .showAddDownload, object: nil)
