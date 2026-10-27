@@ -154,6 +154,22 @@ struct DetailPanel: View {
                 Label(e, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .font(.callout)
+                    .textSelection(.enabled)
+                if item.kind == .video, needsCookies(e) {
+                    HStack(spacing: 10) {
+                        Button {
+                            UserDefaults.standard.set(true, forKey: Prefs.browserCookiesKey)
+                            manager.resume(item)
+                        } label: {
+                            Label(Prefs.useBrowserCookies ? "Retry with Chrome cookies" : "Use Chrome cookies and retry",
+                                  systemImage: "person.badge.key")
+                        }
+                        .controlSize(.small)
+                        Text("Uses your YouTube sign-in from Chrome. macOS will ask once — choose “Always Allow”.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .padding(14)
@@ -174,6 +190,13 @@ struct DetailPanel: View {
             Button { manager.reveal(item) } label: { Label("Show in Finder", systemImage: "folder") }
         }
         .controlSize(.small)
+    }
+
+    /// yt-dlp errors that a signed-in browser session usually fixes.
+    private func needsCookies(_ message: String) -> Bool {
+        let m = message.lowercased()
+        return m.contains("not a bot") || m.contains("sign in") || m.contains("cookies")
+            || m.contains("403") || m.contains("confirm your age") || m.contains("age-restricted")
     }
 
     private func info(_ title: String, _ value: String) -> some View {

@@ -226,9 +226,16 @@ final class DownloadManager: ObservableObject {
                 return
             }
             item.status = .failed
-            item.errorMessage = message.contains("403")
+            let lower = message.lowercased()
+            if lower.contains("not a bot") || lower.contains("sign in to confirm") {
+                item.errorMessage = Prefs.useBrowserCookies
+                    ? "YouTube asked to confirm you're not a bot, even with Chrome cookies. Make sure you're signed in to YouTube in Chrome's main profile, then retry."
+                    : "YouTube asked to confirm you're not a bot. Signing in fixes this: use your Chrome cookies and retry."
+            } else {
+                item.errorMessage = message.contains("403")
                 ? "The site refused the download (HTTP 403). Try again later, or turn on “Use Chrome cookies” in Settings → Video."
                 : message
+            }
             item.speed = 0
             item.connections = 0
             changed()
