@@ -59,7 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Browser extension bridge on 127.0.0.1:9614
         let server = LocalServer(
             onAdd: { request in DownloadManager.shared.addFromBrowser(request) },
-            onVideo: { request in DownloadManager.shared.addVideoFromBrowser(request) }
+            onVideo: { request in DownloadManager.shared.addVideoFromBrowser(request) },
+            onPrefetch: { request in DownloadManager.shared.prefetchFromBrowser(request) }
         )
         server.start()
         self.server = server

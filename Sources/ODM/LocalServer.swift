@@ -26,11 +26,14 @@ final class LocalServer {
     private let queue = DispatchQueue(label: "odm.server")
     private let onAdd: (AddRequest) -> Void
     private let onVideo: (VideoRequest) -> Void
+    private let onPrefetch: (VideoRequest) -> Void
     private var usedFallback = false
 
-    init(onAdd: @escaping (AddRequest) -> Void, onVideo: @escaping (VideoRequest) -> Void) {
+    init(onAdd: @escaping (AddRequest) -> Void, onVideo: @escaping (VideoRequest) -> Void,
+         onPrefetch: @escaping (VideoRequest) -> Void) {
         self.onAdd = onAdd
         self.onVideo = onVideo
+        self.onPrefetch = onPrefetch
     }
 
     func start() {
@@ -128,6 +131,14 @@ final class LocalServer {
                 return
             }
             let handler = onVideo
+            DispatchQueue.main.async { handler(video) }
+            send(conn, status: "200 OK", body: #"{"ok":true}"#, origin: origin)
+        case ("POST", "/prefetch"):
+            guard let video = try? JSONDecoder().decode(VideoRequest.self, from: req.body) else {
+                send(conn, status: "400 Bad Request", body: #"{"ok":false,"error":"bad json"}"#, origin: origin)
+                return
+            }
+            let handler = onPrefetch
             DispatchQueue.main.async { handler(video) }
             send(conn, status: "200 OK", body: #"{"ok":true}"#, origin: origin)
         default:

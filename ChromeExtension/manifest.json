@@ -3,7 +3,7 @@
   "author": "Nirob Islam",
   "homepage_url": "https://www.nirobislam.com/en/",
   "name": "ODM Integration",
-  "version": "1.6",
+  "version": "1.7",
   "description": "Send Chrome downloads and web videos to ODM (Open Source Download Manager) on your Mac.",
   "permissions": [
     "downloads",

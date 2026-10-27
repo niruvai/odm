@@ -166,6 +166,8 @@ final class DownloadItem: ObservableObject, Identifiable {
     // Live values, not persisted
     @Published var speed: Double = 0
     @Published var connections: Int = 0
+    /// What a video download is doing before data arrives ("Getting video info…"). Not saved.
+    @Published var stage: String?
 
     var nameResolved: Bool
     var headers: [String: String]
@@ -175,6 +177,10 @@ final class DownloadItem: ObservableObject, Identifiable {
     var videoAttempt = 0
     /// Open a progress window when this download next starts (set for user/browser actions).
     var wantsWindow = false
+    // Video start bookkeeping (not saved)
+    var videoStartedAt = Date()
+    var usedPrefetch = false
+    var skipPrefetch = false
     /// Changes on every start/pause so stale engine events can be ignored.
     var runToken = UUID()
 

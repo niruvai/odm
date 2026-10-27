@@ -248,7 +248,7 @@ struct DownloadProgressView: View {
     private var statusText: String {
         switch item.status {
         case .queued: return "Waiting in queue…"
-        case .connecting: return "Connecting…"
+        case .connecting: return item.stage ?? "Connecting…"
         case .downloading: return "Receiving data…"
         case .paused: return "Paused"
         case .completed: return "Download complete"
@@ -287,7 +287,7 @@ struct DownloadProgressView: View {
             switch item.status {
             case .downloading: return [ConnectionRow(n: 1, downloaded: item.downloadedBytes, info: "Receiving video and audio…")]
             case .completed: info = "Complete"
-            case .connecting: info = "Preparing…"
+            case .connecting: info = item.stage ?? "Preparing…"
             default: info = item.status.label
             }
             return [ConnectionRow(n: 1, downloaded: item.downloadedBytes, info: info)]

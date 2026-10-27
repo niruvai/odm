@@ -98,6 +98,16 @@
     }
   }
 
+  // While the user is choosing a quality, ODM starts getting the video info in the background,
+  // so the download starts sooner. Harmless if ODM is closed or older.
+  function prefetch() {
+    try {
+      chrome.runtime.sendMessage({ type: "prefetch", url: location.href }, () => void chrome.runtime.lastError);
+    } catch (e) {
+      /* extension was reloaded; the next page load fixes it */
+    }
+  }
+
   function closeMenus() {
     document.querySelectorAll(".odm-wrap.open").forEach((w) => w.classList.remove("open"));
   }
@@ -137,7 +147,10 @@
       e.preventDefault();
       const open = !wrap.classList.contains("open");
       closeMenus();
-      if (open) wrap.classList.add("open");
+      if (open) {
+        wrap.classList.add("open");
+        prefetch();
+      }
     });
     // Keep clicks on our UI from pausing / playing the video
     for (const ev of ["mousedown", "mouseup", "dblclick", "pointerdown", "pointerup"]) {

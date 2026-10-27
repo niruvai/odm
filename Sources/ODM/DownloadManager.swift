@@ -89,6 +89,16 @@ final class DownloadManager: ObservableObject {
         add(urlString: r.url, startNow: true, kind: .video, quality: r.quality)
     }
 
+    /// The user opened ODM's quality menu on a video page: start getting the video info now,
+    /// so the download starts faster once they pick a quality.
+    func prefetchFromBrowser(_ r: VideoRequest) {
+        if let cookies = r.cookies, !cookies.isEmpty {
+            CookieStore.save(cookies, for: r.url)
+        }
+        if items.contains(where: { $0.kind == .video && $0.url == r.url && $0.status.isActive }) { return }
+        VideoPrefetcher.shared.prefetch(r.url)
+    }
+
     private func directory(for category: FileCategory) -> String {
         let base = Prefs.downloadFolder
         return Prefs.categorize ? (base as NSString).appendingPathComponent(category.title) : base
@@ -118,6 +128,7 @@ final class DownloadManager: ObservableObject {
         }
         if item.kind == .video {
             item.videoAttempt = 0
+            item.skipPrefetch = false
             startVideo(item)
             return
         }
@@ -154,6 +165,13 @@ final class DownloadManager: ObservableObject {
         item.runToken = token
         item.status = .connecting
         item.errorMessage = nil
+        item.stage = "Preparing…"
+        if item.videoAttempt == 0 && !item.skipPrefetch {
+            item.videoStartedAt = Date()
+            timing(item, "start  \(item.url)")
+        } else {
+            timing(item, "retry (attempt \(item.videoAttempt), prefetch \(item.skipPrefetch ? "off" : "on"))")
+        }
         changed()
 
         // Attempt 0: normal. 1: after a 403, refresh yt-dlp. 2: also try other YouTube player clients.
@@ -177,21 +195,44 @@ final class DownloadManager: ObservableObject {
                     self.schedule()
                     return
                 }
-                let engine = VideoEngine(
-                    binary: binary, pageURL: item.url, directory: item.directory,
-                    quality: item.videoQuality, connections: Prefs.connections,
-                    ffmpeg: YtDlp.shared.ffmpegPath, searchPath: YtDlp.shared.searchPath,
-                    extraArgs: attempt >= 2 ? ["--extractor-args", "youtube:player_client=default,tv,web_safari,android"] : []
-                ) { [weak self, weak item] event in
-                    DispatchQueue.main.async {
-                        guard let self = self, let item = item else { return }
-                        self.handleVideo(event, for: item, token: token)
+                self.timing(item, "tools ready")
+
+                // Starts yt-dlp, with prefetched info when there is some (faster) or the page link.
+                let launch: (URL?) -> Void = { [weak self, weak item] info in
+                    guard let self = self, let item = item,
+                          item.runToken == token, item.status == .connecting else { return }
+                    item.usedPrefetch = (info != nil)
+                    item.stage = info != nil ? "Starting download…" : "Getting video info…"
+                    self.timing(item, info != nil ? "using prefetched info" : "getting video info")
+                    let engine = VideoEngine(
+                        binary: binary, pageURL: item.url, directory: item.directory,
+                        quality: item.videoQuality, connections: Prefs.connections,
+                        ffmpeg: YtDlp.shared.ffmpegPath, searchPath: YtDlp.shared.searchPath,
+                        extraArgs: attempt >= 2 ? ["--extractor-args", "youtube:player_client=default,tv,web_safari,android"] : [],
+                        infoJSON: info
+                    ) { [weak self, weak item] event in
+                        DispatchQueue.main.async {
+                            guard let self = self, let item = item else { return }
+                            self.handleVideo(event, for: item, token: token)
+                        }
                     }
+                    self.videoEngines[item.id] = engine
+                    engine.start()
                 }
-                self.videoEngines[item.id] = engine
-                engine.start()
+
+                if attempt == 0 && !item.skipPrefetch {
+                    item.stage = "Getting video info…"
+                    VideoPrefetcher.shared.takeInfo(for: item.url, completion: launch)
+                } else {
+                    launch(nil)
+                }
             }
         }
+    }
+
+    private func timing(_ item: DownloadItem, _ what: String) {
+        let id = String(item.id.uuidString.prefix(6))
+        TimingLog.write(String(format: "[%@] +%5.1fs  %@", id, Date().timeIntervalSince(item.videoStartedAt), what))
     }
 
     private func handleVideo(_ event: VideoEvent, for item: DownloadItem, token: UUID) {
@@ -205,9 +246,15 @@ final class DownloadManager: ObservableObject {
         switch event {
         case .title(let title):
             item.fileName = FileUtil.sanitize(title)
+            if item.status == .connecting {
+                item.stage = "Starting download…"
+                timing(item, "got video info")
+            }
         case .progress(let downloaded, let total, let speed):
             if item.status == .connecting {
                 item.status = .downloading
+                item.stage = nil
+                timing(item, "first data")
                 changed()
             }
             guard item.status == .downloading else { return }
@@ -226,11 +273,22 @@ final class DownloadManager: ObservableObject {
             item.dateCompleted = Date()
             item.speed = 0
             item.connections = 0
+            item.stage = nil
+            timing(item, "completed")
             changed()
             notifyCompleted(item)
             schedule()
         case .failed(let message):
             videoEngines[item.id] = nil
+            timing(item, "failed: \(message)")
+            // A download that used prefetched info failed: try once more the normal way.
+            if item.usedPrefetch {
+                item.usedPrefetch = false
+                item.skipPrefetch = true
+                item.status = .paused   // so startVideo's state checks pass
+                startVideo(item)
+                return
+            }
             // YouTube often answers 403 when yt-dlp is out of date or a player client is blocked:
             // retry automatically before giving up.
             if message.contains("403"), item.videoAttempt < 2 {
@@ -240,6 +298,7 @@ final class DownloadManager: ObservableObject {
                 return
             }
             item.status = .failed
+            item.stage = nil
             let lower = message.lowercased()
             if lower.contains("could not find chrome cookies") || lower.contains("cookies database") {
                 item.errorMessage = "ODM couldn't read Chrome's cookies directly. Open this video in Chrome and press ODM's Download button on the video (or “Download video” in the extension) — that passes your YouTube sign-in to ODM."
@@ -375,6 +434,7 @@ final class DownloadManager: ObservableObject {
     func pause(_ item: DownloadItem) {
         guard item.status.isActive || item.status == .queued else { return }
         item.runToken = UUID()
+        item.stage = nil
         item.status = .paused
         item.speed = 0
         item.connections = 0

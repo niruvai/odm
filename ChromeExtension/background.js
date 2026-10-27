@@ -95,8 +95,25 @@ async function sendVideo(url, quality) {
   }
 }
 
+async function sendPrefetch(url) {
+  try {
+    const r = await fetch(API + "/prefetch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, cookies: await siteCookies(url) }),
+    });
+    return r.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Messages from the YouTube button and the popup
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg && msg.type === "prefetch" && /^https?:/i.test(msg.url || "")) {
+    sendPrefetch(msg.url).then((ok) => sendResponse({ ok }));
+    return true;
+  }
   if (msg && msg.type === "video" && /^https?:/i.test(msg.url || "")) {
     sendVideo(msg.url, msg.quality).then((ok) => sendResponse({ ok }));
     return true; // keep the channel open for the async reply

@@ -18,7 +18,13 @@ final class YtDlp: ObservableObject {
 
     private let workQueue = DispatchQueue(label: "odm.tools")
     private let ytdlpURL = URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!
+    /// "onedir" build: a launcher plus an _internal folder. Starts several seconds faster than the
+    /// single-file build, which unpacks its whole Python runtime on every launch.
+    private let ytdlpOnedirURL = URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos.zip")!
     private static let maxAge: TimeInterval = 3 * 24 * 3600
+    /// A 403 retry may refresh yt-dlp, but not more often than this.
+    private static let minForcedUpdateAge: TimeInterval = 6 * 3600
+    private static let onedirFailureKey = "ytdlpOnedirFailedAt"
 
     #if arch(arm64)
     private let denoURL = URL(string: "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip")!
@@ -35,7 +41,13 @@ final class YtDlp: ObservableObject {
     #endif
 
     private init() {
-        refreshVersion()
+        // Folders left by an earlier update (kept until now in case a download was still using them).
+        let fm = FileManager.default
+        if let names = try? fm.contentsOfDirectory(atPath: binDir.path) {
+            for n in names where n.hasPrefix("yt-dlp-app.old") {
+                try? fm.removeItem(at: binDir.appendingPathComponent(n))
+            }
+        }
     }
 
     // MARK: Locations
@@ -47,14 +59,17 @@ final class YtDlp: ObservableObject {
     }
 
     var managedBinary: URL { binDir.appendingPathComponent("yt-dlp") }
+    var onedirDir: URL { binDir.appendingPathComponent("yt-dlp-app", isDirectory: true) }
+    var onedirBinary: URL { onedirDir.appendingPathComponent("yt-dlp_macos") }
 
     private func firstExecutable(_ paths: [String]) -> String? {
         paths.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Our own copy first, then Homebrew / MacPorts.
+    /// Our fast onedir copy first, then our single-file copy, then Homebrew / MacPorts.
     var binary: URL? {
-        firstExecutable([managedBinary.path, "/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/opt/local/bin/yt-dlp"])
+        firstExecutable([onedirBinary.path, managedBinary.path,
+                         "/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/opt/local/bin/yt-dlp"])
             .map { URL(fileURLWithPath: $0) }
     }
 
@@ -85,7 +100,6 @@ final class YtDlp: ObservableObject {
                 self.setStatus(nil)
                 if case .failure(let e) = result { self.lastError = e.localizedDescription }
                 self.toolsChanged += 1
-                self.refreshVersion()
                 completion(result)
             }
         }
@@ -100,22 +114,45 @@ final class YtDlp: ObservableObject {
         let fm = FileManager.default
         DispatchQueue.main.async { self.lastError = nil }
 
-        // 1. yt-dlp (required)
+        // 1. yt-dlp (required). Prefer the faster onedir build; the single-file build stays as a fallback.
         var ytdlp = binary
-        let managedExists = fm.isExecutableFile(atPath: managedBinary.path)
-        let age = (try? fm.attributesOfItem(atPath: managedBinary.path)[.modificationDate] as? Date)
+        let hasOnedir = fm.isExecutableFile(atPath: onedirBinary.path)
+        let hasSingle = fm.isExecutableFile(atPath: managedBinary.path)
+        let current: URL? = hasOnedir ? onedirBinary : (hasSingle ? managedBinary : nil)
+        let age = current
+            .flatMap { (try? fm.attributesOfItem(atPath: $0.path)[.modificationDate]) as? Date }
             .map { Date().timeIntervalSince($0) } ?? .infinity
-        if ytdlp == nil || forceUpdate || (managedExists && age > Self.maxAge) {
+        let lastFailure = UserDefaults.standard.double(forKey: Self.onedirFailureKey)
+        let onedirRecentlyFailed = Date().timeIntervalSince1970 - lastFailure < 24 * 3600
+        let refreshDue = current != nil && (age > Self.maxAge || (forceUpdate && age > Self.minForcedUpdateAge))
+        let migrate = !hasOnedir && !onedirRecentlyFailed
+
+        if ytdlp == nil || refreshDue || migrate {
             setStatus("Preparing video tools…")
-            do {
-                let tmp = try fetch(ytdlpURL)
-                try installExecutable(from: tmp, to: managedBinary)
-                ytdlp = managedBinary
-            } catch {
-                if ytdlp == nil {
-                    return .failure(DMError.message("Could not prepare video downloads (\(error.localizedDescription)). Check your internet connection."))
+            var installed = false
+            if !onedirRecentlyFailed || hasOnedir {
+                do {
+                    try installOnedir()
+                    ytdlp = onedirBinary
+                    installed = true
+                    UserDefaults.standard.removeObject(forKey: Self.onedirFailureKey)
+                } catch {
+                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.onedirFailureKey)
                 }
-                // Keep using the older copy if the update failed.
+            }
+            // Onedir didn't work: fall back to the single-file build, exactly as before.
+            let singleNeeded = ytdlp == nil || (current == managedBinary && refreshDue)
+            if !installed && singleNeeded {
+                do {
+                    let tmp = try fetch(ytdlpURL)
+                    try installExecutable(from: tmp, to: managedBinary)
+                    ytdlp = managedBinary
+                } catch {
+                    if ytdlp == nil {
+                        return .failure(DMError.message("Could not prepare video downloads (\(error.localizedDescription)). Check your internet connection."))
+                    }
+                    // Keep using the older copy if the update failed.
+                }
             }
         }
         guard let ytdlpBinary = ytdlp else {
@@ -149,6 +186,60 @@ final class YtDlp: ObservableObject {
             }
         }
         return .success(ytdlpBinary)
+    }
+
+    /// Downloads and checks the onedir yt-dlp, then swaps it in. Throws (and changes nothing) on any problem.
+    private func installOnedir() throws {
+        let fm = FileManager.default
+        let zip = try fetch(ytdlpOnedirURL)
+        let work = fm.temporaryDirectory.appendingPathComponent("odm-ytdlp-" + UUID().uuidString, isDirectory: true)
+        defer {
+            try? fm.removeItem(at: zip)
+            try? fm.removeItem(at: work)
+        }
+        try fm.createDirectory(at: work, withIntermediateDirectories: true)
+
+        let unzip = Process()
+        unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        unzip.arguments = ["-x", "-k", zip.path, work.path]
+        try unzip.run()
+        unzip.waitUntilExit()
+        let exe = work.appendingPathComponent("yt-dlp_macos")
+        guard unzip.terminationStatus == 0, fm.fileExists(atPath: exe.path),
+              fm.fileExists(atPath: work.appendingPathComponent("_internal").path) else {
+            throw DMError.message("Unexpected yt-dlp package")
+        }
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: exe.path)
+        _ = YtDlp.runQuick(URL(fileURLWithPath: "/usr/bin/xattr"), ["-cr", work.path])
+        guard YtDlp.runQuick(exe, ["--version"]) != nil else {
+            throw DMError.message("yt-dlp package does not run on this Mac")
+        }
+
+        // Swap in. The previous copy is only renamed (a running download may still use it) and is
+        // deleted the next time ODM starts.
+        let dest = onedirDir
+        var old: URL?
+        if fm.fileExists(atPath: dest.path) {
+            let o = binDir.appendingPathComponent("yt-dlp-app.old-\(Int(Date().timeIntervalSince1970))")
+            try fm.moveItem(at: dest, to: o)
+            old = o
+        }
+        do {
+            try fm.moveItem(at: work, to: dest)
+        } catch {
+            if let o = old { try? fm.moveItem(at: o, to: dest) }
+            throw error
+        }
+        try? fm.setAttributes([.modificationDate: Date()], ofItemAtPath: onedirBinary.path)
+    }
+
+    /// yt-dlp arguments that pass the user's browser sign-in, when that setting is on.
+    static func cookieArgs(for pageURL: String) -> [String] {
+        guard Prefs.useBrowserCookies else { return [] }
+        if let file = CookieStore.file(for: pageURL) {
+            return ["--cookies", file.path]
+        }
+        return ["--cookies-from-browser", "chrome"]
     }
 
     private func setStatus(_ s: String?) {
@@ -291,7 +382,7 @@ final class VideoEngine {
     private var lastProgress = Date.distantPast
 
     init(binary: URL, pageURL: String, directory: String, quality: String, connections: Int,
-         ffmpeg: String?, searchPath: String, extraArgs: [String] = [],
+         ffmpeg: String?, searchPath: String, extraArgs: [String] = [], infoJSON: URL? = nil,
          onEvent: @escaping (VideoEvent) -> Void) {
         self.onEvent = onEvent
 
@@ -321,16 +412,14 @@ final class VideoEngine {
             // No ffmpeg: only formats that already contain video + audio in one file.
             args += ["-f", height.map { "b[height<=\($0)]/b" } ?? "b"]
         }
-        if Prefs.useBrowserCookies {
-            // Prefer the sign-in cookies the extension sent; fall back to reading Chrome directly.
-            if let file = CookieStore.file(for: pageURL) {
-                args += ["--cookies", file.path]
-            } else {
-                args += ["--cookies-from-browser", "chrome"]
-            }
-        }
+        args += YtDlp.cookieArgs(for: pageURL)
         args += extraArgs
-        args.append(pageURL)
+        if let info = infoJSON {
+            // Video info was already fetched in the background: skip the slow extraction step.
+            args += ["--load-info-json", info.path]
+        } else {
+            args.append(pageURL)
+        }
 
         process.executableURL = binary
         process.arguments = args
