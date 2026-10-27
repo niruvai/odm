@@ -223,6 +223,7 @@ enum CellKind { case name, size, progress, speed, eta, status }
 
 struct CellView: View {
     @ObservedObject var item: DownloadItem
+    @ObservedObject private var tools = YtDlp.shared
     let kind: CellKind
 
     var body: some View {
@@ -265,10 +266,16 @@ struct CellView: View {
                 .foregroundStyle(.secondary)
 
         case .status:
-            Label(item.status.label, systemImage: item.status.symbol)
+            Label(statusText, systemImage: item.status.symbol)
                 .foregroundStyle(item.status.color)
                 .help(item.errorMessage ?? item.status.label)
         }
+    }
+
+    /// While a video waits for yt-dlp / Deno / ffmpeg to download, say so.
+    private var statusText: String {
+        if item.kind == .video, item.status == .connecting, let s = tools.status { return s }
+        return item.status.label
     }
 
     private var progressText: String {

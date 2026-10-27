@@ -11,6 +11,7 @@ enum Prefs {
     static let categorizeKey = "sortIntoCategoryFolders"
     static let notifyKey = "notifyOnComplete"
     static let videoQualityKey = "defaultVideoQuality"
+    static let browserCookiesKey = "videoUseChromeCookies"
 
     static var defaultFolder: String {
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
@@ -34,6 +35,7 @@ enum Prefs {
     static var categorize: Bool { UserDefaults.standard.bool(forKey: categorizeKey) }
     static var notify: Bool { UserDefaults.standard.bool(forKey: notifyKey) }
     static var videoQuality: String { UserDefaults.standard.string(forKey: videoQualityKey) ?? "1080" }
+    static var useBrowserCookies: Bool { UserDefaults.standard.bool(forKey: browserCookiesKey) }
     static var downloadFolder: String {
         let s = UserDefaults.standard.string(forKey: folderKey) ?? ""
         return s.isEmpty ? defaultFolder : (s as NSString).expandingTildeInPath

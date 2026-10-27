@@ -7,7 +7,7 @@ Built with SwiftUI, no Xcode required — Apple's Command Line Tools are enough.
 - **Pause / resume**, survives network drops and app restarts
 - **Download queue**, category folders, menu-bar icon, completion notifications
 - **Chrome / Edge / Brave extension** that hands browser downloads to the app (with cookies and referrer)
-- **Web video downloads via [yt-dlp](https://github.com/yt-dlp/yt-dlp)** — a Download button on YouTube videos, plus a “Download video” button for any page yt-dlp supports
+- **Web video downloads via [yt-dlp](https://github.com/yt-dlp/yt-dlp)** — a Download button on YouTube videos, plus a “Download video” button for any page yt-dlp supports. yt-dlp, Deno and ffmpeg are fetched automatically
 
 > Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission. Respect each site's terms of service.
 
@@ -64,15 +64,17 @@ cd odm
 - **অন্য সাইট**: এক্সটেনশনের আইকনে চাপুন → **Download video**, অথবা পেজে রাইট-ক্লিক → **Download video with ODM**
 - অ্যাপে ⌘N দিয়ে YouTube/Facebook/Vimeo লিংক দিলেও নিজে থেকে ভিডিও হিসেবে নামবে
 
-প্রথম ভিডিওর সময় ODM নিজে yt-dlp ডাউনলোড করে নেয় (`~/Library/Application Support/ODM/bin`)। Settings → Video থেকে আপডেট করা যায়।
+প্রথম ভিডিওর সময় ODM নিজে থেকে তিনটা টুল নামিয়ে নেয় (`~/Library/Application Support/ODM/bin`):
 
-**HD ভিডিওর জন্য ffmpeg লাগবে।** YouTube-এ 720p-এর বেশি ভিডিও আর অডিও আলাদা থাকে, ffmpeg সেগুলো জোড়া লাগায়। না থাকলে শুধু কম কোয়ালিটির (প্রায় 360p) ফাইল পাওয়া যাবে। [Homebrew](https://brew.sh) থাকলে:
+| টুল | কেন লাগে |
+|---|---|
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | ভিডিও ডাউনলোডার, প্রতি ৩ দিনে নিজে আপডেট হয় |
+| [Deno](https://deno.com) | YouTube-এর জাভাস্ক্রিপ্ট চ্যালেঞ্জ সমাধানে yt-dlp-এর দরকার |
+| ffmpeg | HD ভিডিও আর অডিও জোড়া লাগিয়ে একটা MP4 বানায় |
 
-```bash
-brew install ffmpeg
-```
+Homebrew দিয়ে আগে থেকে বসানো থাকলে সেগুলোই ব্যবহার হয়। Settings → Video-তে সব টুলের অবস্থা দেখা যায়।
 
-তারপর ODM আবার চালু করুন।
+**HTTP 403 এলে:** ODM নিজে দুইবার আবার চেষ্টা করে (প্রথমে yt-dlp আপডেট করে, তারপর অন্য YouTube ক্লায়েন্ট দিয়ে)। তারপরও না হলে Settings → Video → **Use Chrome cookies** চালু করে আবার Resume দিন।
 
 > যে ভিডিও ডাউনলোডের অধিকার আপনার আছে শুধু সেগুলোই নামান: নিজের আপলোড, Creative Commons, বা মালিকের অনুমতি নিয়ে।
 
@@ -101,7 +103,7 @@ brew install ffmpeg
 Sources/ODM/
   DownloadEngine.swift   multi-connection engine, dynamic segmentation, retries
   Prober.swift           size, file name and range support detection
-  YtDlp.swift            yt-dlp install/update and the video download runner
+  YtDlp.swift            yt-dlp / Deno / ffmpeg setup and the video download runner
   DownloadManager.swift  list, queue, persistence, notifications
   LocalServer.swift      127.0.0.1:9614 bridge for the browser extension
   ContentView.swift      main window

@@ -171,6 +171,8 @@ final class DownloadItem: ObservableObject, Identifiable {
     var headers: [String: String]
     let kind: DownloadKind
     var videoQuality: String
+    /// How many automatic retries a failing video has used (not saved).
+    var videoAttempt = 0
     /// Changes on every start/pause so stale engine events can be ignored.
     var runToken = UUID()
 

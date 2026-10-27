@@ -279,7 +279,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .tabItem { Label("Browser", systemImage: "globe") }
         }
-        .frame(width: 540, height: 340)
+        .frame(width: 560, height: 400)
     }
 
     private func chooseFolder() {
@@ -299,6 +299,7 @@ struct SettingsView: View {
 struct VideoSettingsView: View {
     @ObservedObject private var ytdlp = YtDlp.shared
     @AppStorage(Prefs.videoQualityKey) private var quality = "1080"
+    @AppStorage(Prefs.browserCookiesKey) private var useCookies = false
 
     var body: some View {
         Form {
@@ -310,39 +311,33 @@ struct VideoSettingsView: View {
 
             LabeledContent("yt-dlp") {
                 HStack {
-                    if ytdlp.isInstalling {
-                        ProgressView().controlSize(.small)
-                        Text("Downloading…")
-                    } else if let v = ytdlp.version {
+                    if let v = ytdlp.version {
                         Label("Installed (\(v))", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                     } else {
-                        Text("Not installed yet — added automatically on first video")
+                        Text("Added automatically on first video")
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(ytdlp.version == nil ? "Install" : "Update") { ytdlp.install() }
+                    Button(ytdlp.version == nil ? "Install Tools" : "Update") { ytdlp.install() }
                         .disabled(ytdlp.isInstalling)
+                }
+            }
+            toolRow("Deno", path: ytdlp.denoPath, missing: "Needed for YouTube — added automatically")
+            toolRow("ffmpeg", path: ytdlp.ffmpegPath, missing: "Needed for HD — added automatically")
+
+            if let s = ytdlp.status {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text(s).font(.caption)
                 }
             }
             if let e = ytdlp.lastError {
                 Text(e).font(.caption).foregroundStyle(.red)
             }
 
-            LabeledContent("ffmpeg") {
-                if let path = ytdlp.ffmpegPath {
-                    Label(path, systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                } else {
-                    Text("Not found")
-                        .foregroundStyle(.orange)
-                }
-            }
-            Text(ytdlp.ffmpegPath == nil
-                 ? "Without ffmpeg, YouTube gives only low-quality (about 360p) single files. For HD, install Homebrew and run: brew install ffmpeg — then restart ODM."
-                 : "HD video and audio are downloaded separately and merged into one MP4.")
+            Toggle("Use Chrome cookies (helps with “HTTP 403” and age-restricted videos)", isOn: $useCookies)
+            Text("macOS will ask once to let yt-dlp read Chrome's cookie key — choose “Always Allow”.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -354,6 +349,20 @@ struct VideoSettingsView: View {
         }
         .padding()
         .onAppear { ytdlp.refreshVersion() }
+        .id(ytdlp.toolsChanged)
+    }
+
+    private func toolRow(_ name: String, path: String?, missing: String) -> some View {
+        LabeledContent(name) {
+            if let path = path {
+                Label((path as NSString).abbreviatingWithTildeInPath, systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else {
+                Text(missing).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

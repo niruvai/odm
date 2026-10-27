@@ -1,20 +1,44 @@
 import Foundation
 
-/// Finds, installs and updates yt-dlp (https://github.com/yt-dlp/yt-dlp), and finds ffmpeg.
-/// yt-dlp is downloaded on first use into ~/Library/Application Support/ODM/bin.
+/// Manages the helper tools ODM uses for web video:
+///  • yt-dlp  – the video downloader (https://github.com/yt-dlp/yt-dlp)
+///  • Deno    – JavaScript runtime yt-dlp needs to solve YouTube's player challenges
+///  • ffmpeg  – merges separate HD video and audio streams into one MP4
+/// Missing tools are downloaded on first use into ~/Library/Application Support/ODM/bin,
+/// and yt-dlp is refreshed every few days because YouTube changes often.
 final class YtDlp: ObservableObject {
     static let shared = YtDlp()
 
     @Published private(set) var version: String?
-    @Published private(set) var isInstalling = false
+    @Published private(set) var status: String?        // e.g. "Downloading ffmpeg…"
     @Published private(set) var lastError: String?
+    @Published private(set) var toolsChanged = 0       // bumps after installs so Settings refreshes
 
-    private let releaseURL = URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!
-    private var waiters: [(Result<URL, Error>) -> Void] = []
+    var isInstalling: Bool { status != nil }
+
+    private let workQueue = DispatchQueue(label: "odm.tools")
+    private let ytdlpURL = URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!
+    private static let maxAge: TimeInterval = 3 * 24 * 3600
+
+    #if arch(arm64)
+    private let denoURL = URL(string: "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip")!
+    private let ffmpegURLs = [
+        URL(string: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip")!,
+        URL(string: "https://github.com/eugeneware/ffmpeg-static/releases/latest/download/ffmpeg-darwin-arm64.gz")!,
+    ]
+    #else
+    private let denoURL = URL(string: "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-apple-darwin.zip")!
+    private let ffmpegURLs = [
+        URL(string: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/amd64/release/ffmpeg.zip")!,
+        URL(string: "https://github.com/eugeneware/ffmpeg-static/releases/latest/download/ffmpeg-darwin-x64.gz")!,
+    ]
+    #endif
 
     private init() {
         refreshVersion()
     }
+
+    // MARK: Locations
 
     var binDir: URL {
         let dir = FileUtil.appSupportDir.appendingPathComponent("bin", isDirectory: true)
@@ -24,71 +48,179 @@ final class YtDlp: ObservableObject {
 
     var managedBinary: URL { binDir.appendingPathComponent("yt-dlp") }
 
-    /// Our own copy first, then a Homebrew / MacPorts install.
+    private func firstExecutable(_ paths: [String]) -> String? {
+        paths.first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+    /// Our own copy first, then Homebrew / MacPorts.
     var binary: URL? {
-        let fm = FileManager.default
-        if fm.isExecutableFile(atPath: managedBinary.path) { return managedBinary }
-        for p in ["/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/opt/local/bin/yt-dlp"]
-        where fm.isExecutableFile(atPath: p) {
-            return URL(fileURLWithPath: p)
-        }
-        return nil
+        firstExecutable([managedBinary.path, "/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/opt/local/bin/yt-dlp"])
+            .map { URL(fileURLWithPath: $0) }
     }
 
-    /// ffmpeg is needed to merge HD video + audio. Without it yt-dlp can only fetch single-file formats.
+    var denoPath: String? {
+        firstExecutable([binDir.appendingPathComponent("deno").path, "/opt/homebrew/bin/deno",
+                         "/usr/local/bin/deno", NSHomeDirectory() + "/.deno/bin/deno"])
+    }
+
     var ffmpegPath: String? {
-        let fm = FileManager.default
-        let candidates = [binDir.appendingPathComponent("ffmpeg").path,
-                          "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg"]
-        return candidates.first { fm.isExecutableFile(atPath: $0) }
+        firstExecutable([binDir.appendingPathComponent("ffmpeg").path, "/opt/homebrew/bin/ffmpeg",
+                         "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg"])
     }
 
-    /// Calls back on the main thread with a usable yt-dlp, downloading it first if needed.
-    func ensureInstalled(_ completion: @escaping (Result<URL, Error>) -> Void) {
-        if let b = binary {
-            completion(.success(b))
-            return
+    /// PATH for yt-dlp: our tools first, so it finds Deno and ffmpeg.
+    var searchPath: String {
+        [binDir.path, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+            .joined(separator: ":")
+    }
+
+    // MARK: Install / update
+
+    /// Makes sure yt-dlp (required), Deno and ffmpeg (best effort) are present, then calls back on the
+    /// main thread with yt-dlp's location. `forceUpdate` re-downloads yt-dlp even if it is recent.
+    func prepare(forceUpdate: Bool = false, _ completion: @escaping (Result<URL, Error>) -> Void) {
+        workQueue.async {
+            let result = self.prepareSync(forceUpdate: forceUpdate)
+            DispatchQueue.main.async {
+                self.setStatus(nil)
+                if case .failure(let e) = result { self.lastError = e.localizedDescription }
+                self.toolsChanged += 1
+                self.refreshVersion()
+                completion(result)
+            }
         }
-        waiters.append(completion)
-        if !isInstalling { install() }
     }
 
-    /// Downloads the latest yt-dlp release (also used for "Update").
+    /// Settings → "Update": fetch the newest yt-dlp now.
     func install() {
-        guard !isInstalling else { return }
-        isInstalling = true
-        lastError = nil
-        let destination = managedBinary
+        prepare(forceUpdate: true) { _ in }
+    }
 
-        let task = URLSession.shared.downloadTask(with: releaseURL) { [weak self] tmp, response, error in
-            var result: Result<URL, Error>
+    private func prepareSync(forceUpdate: Bool) -> Result<URL, Error> {
+        let fm = FileManager.default
+        DispatchQueue.main.async { self.lastError = nil }
+
+        // 1. yt-dlp (required)
+        var ytdlp = binary
+        let managedExists = fm.isExecutableFile(atPath: managedBinary.path)
+        let age = (try? fm.attributesOfItem(atPath: managedBinary.path)[.modificationDate] as? Date)
+            .map { Date().timeIntervalSince($0) } ?? .infinity
+        if ytdlp == nil || forceUpdate || (managedExists && age > Self.maxAge) {
+            setStatus("Downloading yt-dlp…")
+            do {
+                let tmp = try fetch(ytdlpURL)
+                try installExecutable(from: tmp, to: managedBinary)
+                ytdlp = managedBinary
+            } catch {
+                if ytdlp == nil {
+                    return .failure(DMError.message("Could not download yt-dlp (\(error.localizedDescription)). Check your internet connection."))
+                }
+                // Keep using the older copy if the update failed.
+            }
+        }
+        guard let ytdlpBinary = ytdlp else {
+            return .failure(DMError.message("yt-dlp is not available."))
+        }
+
+        // 2. Deno (YouTube needs a JavaScript runtime)
+        if denoPath == nil {
+            setStatus("Downloading Deno (JavaScript runtime for YouTube)…")
+            if let zip = try? fetch(denoURL), let file = try? unzipFind(zip, named: "deno") {
+                try? installExecutable(from: file, to: binDir.appendingPathComponent("deno"))
+            }
+        }
+
+        // 3. ffmpeg (needed for HD)
+        if ffmpegPath == nil {
+            setStatus("Downloading ffmpeg (for HD video)…")
+            let target = binDir.appendingPathComponent("ffmpeg")
+            for url in ffmpegURLs {
+                guard let archive = try? fetch(url) else { continue }
+                let file: URL?
+                if url.pathExtension == "gz" {
+                    file = try? gunzip(archive)
+                } else {
+                    file = try? unzipFind(archive, named: "ffmpeg")
+                }
+                guard let f = file else { continue }
+                try? installExecutable(from: f, to: target)
+                if YtDlp.runQuick(target, ["-version"]) != nil { break }
+                try? fm.removeItem(at: target)   // didn't run on this Mac; try the next source
+            }
+        }
+        return .success(ytdlpBinary)
+    }
+
+    private func setStatus(_ s: String?) {
+        if Thread.isMainThread { status = s } else { DispatchQueue.main.async { self.status = s } }
+    }
+
+    /// Blocking download (only called on workQueue). Returns a temp file we own.
+    private func fetch(_ url: URL) throws -> URL {
+        final class Box { var result: Result<URL, Error> = .failure(DMError.message("Download did not start")) }
+        let sem = DispatchSemaphore(value: 0)
+        let box = Box()
+        let task = URLSession.shared.downloadTask(with: url) { tmp, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             if let tmp = tmp, code == 200 {
+                let dst = FileManager.default.temporaryDirectory.appendingPathComponent("odm-" + UUID().uuidString)
                 do {
-                    let fm = FileManager.default
-                    if fm.fileExists(atPath: destination.path) { try fm.removeItem(at: destination) }
-                    try fm.moveItem(at: tmp, to: destination)
-                    try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destination.path)
-                    result = .success(destination)
+                    try FileManager.default.moveItem(at: tmp, to: dst)
+                    box.result = .success(dst)
                 } catch {
-                    result = .failure(DMError.message("Could not install yt-dlp: \(error.localizedDescription)"))
+                    box.result = .failure(error)
                 }
+            } else if let error = error {
+                box.result = .failure(error)
             } else {
-                let reason = error?.localizedDescription ?? "HTTP \(code)"
-                result = .failure(DMError.message("Could not download yt-dlp (\(reason)). Check your internet connection."))
+                box.result = .failure(DMError.message("HTTP \(code)"))
             }
-
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isInstalling = false
-                if case .failure(let e) = result { self.lastError = e.localizedDescription }
-                let callbacks = self.waiters
-                self.waiters.removeAll()
-                callbacks.forEach { $0(result) }
-                self.refreshVersion()
-            }
+            sem.signal()
         }
         task.resume()
+        sem.wait()
+        return try box.result.get()
+    }
+
+    private func installExecutable(from src: URL, to dst: URL) throws {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: dst.path) { try fm.removeItem(at: dst) }
+        try fm.moveItem(at: src, to: dst)
+        try fm.setAttributes([.posixPermissions: 0o755, .modificationDate: Date()], ofItemAtPath: dst.path)
+        // Downloaded by us, but clear the quarantine flag just in case.
+        _ = YtDlp.runQuick(URL(fileURLWithPath: "/usr/bin/xattr"), ["-d", "com.apple.quarantine", dst.path])
+    }
+
+    /// Unzips with ditto and returns the first file with the given name.
+    private func unzipFind(_ zip: URL, named name: String) throws -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("odm-unzip-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        p.arguments = ["-x", "-k", zip.path, dir.path]
+        try p.run()
+        p.waitUntilExit()
+        guard p.terminationStatus == 0 else { throw DMError.message("Could not unzip \(name)") }
+        let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil)
+        while let u = e?.nextObject() as? URL {
+            if u.lastPathComponent == name { return u }
+        }
+        throw DMError.message("\(name) not found in archive")
+    }
+
+    private func gunzip(_ gz: URL) throws -> URL {
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("odm-gunzip-" + UUID().uuidString)
+        FileManager.default.createFile(atPath: out.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: out)
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/gunzip")
+        p.arguments = ["-c", gz.path]
+        p.standardOutput = handle
+        try p.run()
+        p.waitUntilExit()
+        try handle.close()
+        guard p.terminationStatus == 0 else { throw DMError.message("Could not unpack ffmpeg") }
+        return out
     }
 
     func refreshVersion() {
@@ -102,7 +234,7 @@ final class YtDlp: ObservableObject {
         }
     }
 
-    /// Runs a short command and returns its trimmed stdout.
+    /// Runs a short command and returns its trimmed stdout (nil if it fails).
     static func runQuick(_ exe: URL, _ args: [String]) -> String? {
         let p = Process()
         p.executableURL = exe
@@ -113,8 +245,9 @@ final class YtDlp: ObservableObject {
         do { try p.run() } catch { return nil }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
+        guard p.terminationStatus == 0 else { return nil }
         let s = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (s?.isEmpty ?? true) ? nil : s
+        return s ?? ""
     }
 
     /// Sites handled by yt-dlp automatically when a link is added.
@@ -158,7 +291,8 @@ final class VideoEngine {
     private var lastProgress = Date.distantPast
 
     init(binary: URL, pageURL: String, directory: String, quality: String, connections: Int,
-         ffmpeg: String?, onEvent: @escaping (VideoEvent) -> Void) {
+         ffmpeg: String?, searchPath: String, extraArgs: [String] = [],
+         onEvent: @escaping (VideoEvent) -> Void) {
         self.onEvent = onEvent
 
         var args: [String] = [
@@ -187,12 +321,16 @@ final class VideoEngine {
             // No ffmpeg: only formats that already contain video + audio in one file.
             args += ["-f", height.map { "b[height<=\($0)]/b" } ?? "b"]
         }
+        if Prefs.useBrowserCookies {
+            args += ["--cookies-from-browser", "chrome"]
+        }
+        args += extraArgs
         args.append(pageURL)
 
         process.executableURL = binary
         process.arguments = args
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + (env["PATH"] ?? "")
+        env["PATH"] = searchPath + ":" + (env["PATH"] ?? "")
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
         process.environment = env

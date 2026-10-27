@@ -103,6 +103,7 @@ final class DownloadManager: ObservableObject {
         guard engines[item.id] == nil, videoEngines[item.id] == nil,
               item.status != .completed, !item.status.isActive else { return }
         if item.kind == .video {
+            item.videoAttempt = 0
             startVideo(item)
             return
         }
@@ -141,7 +142,9 @@ final class DownloadManager: ObservableObject {
         item.errorMessage = nil
         changed()
 
-        YtDlp.shared.ensureInstalled { [weak self] result in
+        // Attempt 0: normal. 1: after a 403, refresh yt-dlp. 2: also try other YouTube player clients.
+        let attempt = item.videoAttempt
+        YtDlp.shared.prepare(forceUpdate: attempt == 1) { [weak self] result in
             guard let self = self, item.runToken == token, item.status == .connecting else { return }
             switch result {
             case .failure(let error):
@@ -162,7 +165,8 @@ final class DownloadManager: ObservableObject {
                 let engine = VideoEngine(
                     binary: binary, pageURL: item.url, directory: item.directory,
                     quality: item.videoQuality, connections: Prefs.connections,
-                    ffmpeg: YtDlp.shared.ffmpegPath
+                    ffmpeg: YtDlp.shared.ffmpegPath, searchPath: YtDlp.shared.searchPath,
+                    extraArgs: attempt >= 2 ? ["--extractor-args", "youtube:player_client=default,tv,web_safari,android"] : []
                 ) { [weak self, weak item] event in
                     DispatchQueue.main.async {
                         guard let self = self, let item = item else { return }
@@ -212,8 +216,18 @@ final class DownloadManager: ObservableObject {
             schedule()
         case .failed(let message):
             videoEngines[item.id] = nil
+            // YouTube often answers 403 when yt-dlp is out of date or a player client is blocked:
+            // retry automatically before giving up.
+            if message.contains("403"), item.videoAttempt < 2 {
+                item.videoAttempt += 1
+                item.status = .paused   // so startVideo's state checks pass
+                startVideo(item)
+                return
+            }
             item.status = .failed
-            item.errorMessage = message
+            item.errorMessage = message.contains("403")
+                ? "The site refused the download (HTTP 403). Try again later, or turn on “Use Chrome cookies” in Settings → Video."
+                : message
             item.speed = 0
             item.connections = 0
             changed()
