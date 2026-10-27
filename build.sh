@@ -14,9 +14,17 @@ if ! command -v swift >/dev/null 2>&1; then
   exit 1
 fi
 
+# UNIVERSAL=1 builds for both Apple Silicon and Intel (used for GitHub releases; needs Xcode).
+ARCH_FLAGS=()
+if [[ "${UNIVERSAL:-0}" == "1" ]]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
+
 echo "==> Compiling (release)…"
-swift build -c release
-BIN_DIR="$(swift build -c release --show-bin-path)"
+swift build -c release ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}
+BIN_DIR="$(swift build -c release ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"} --show-bin-path)"
+
+# Build number = number of commits, so the in-app updater can compare versions.
+BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || true)"
+COMMIT="$(git rev-parse --short HEAD 2>/dev/null || true)"
 
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/odm.XXXXXX")"
 APP="$STAGE/ODM.app"
@@ -26,6 +34,11 @@ echo "==> Creating ODM.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/ODM" "$APP/Contents/MacOS/ODM"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+if [[ -n "$BUILD_NUMBER" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Add :ODMCommit string $COMMIT" "$APP/Contents/Info.plist" 2>/dev/null || true
+  echo "    build $BUILD_NUMBER ($COMMIT)"
+fi
 cp -R ChromeExtension "$APP/Contents/Resources/ChromeExtension"
 
 echo "==> Making app icon"

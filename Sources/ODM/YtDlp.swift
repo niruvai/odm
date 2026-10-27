@@ -106,25 +106,25 @@ final class YtDlp: ObservableObject {
         let age = (try? fm.attributesOfItem(atPath: managedBinary.path)[.modificationDate] as? Date)
             .map { Date().timeIntervalSince($0) } ?? .infinity
         if ytdlp == nil || forceUpdate || (managedExists && age > Self.maxAge) {
-            setStatus("Downloading yt-dlp…")
+            setStatus("Preparing video tools…")
             do {
                 let tmp = try fetch(ytdlpURL)
                 try installExecutable(from: tmp, to: managedBinary)
                 ytdlp = managedBinary
             } catch {
                 if ytdlp == nil {
-                    return .failure(DMError.message("Could not download yt-dlp (\(error.localizedDescription)). Check your internet connection."))
+                    return .failure(DMError.message("Could not prepare video downloads (\(error.localizedDescription)). Check your internet connection."))
                 }
                 // Keep using the older copy if the update failed.
             }
         }
         guard let ytdlpBinary = ytdlp else {
-            return .failure(DMError.message("yt-dlp is not available."))
+            return .failure(DMError.message("Video downloads are not available right now."))
         }
 
         // 2. Deno (YouTube needs a JavaScript runtime)
         if denoPath == nil {
-            setStatus("Downloading Deno (JavaScript runtime for YouTube)…")
+            setStatus("Preparing video tools…")
             if let zip = try? fetch(denoURL), let file = try? unzipFind(zip, named: "deno") {
                 try? installExecutable(from: file, to: binDir.appendingPathComponent("deno"))
             }
@@ -132,7 +132,7 @@ final class YtDlp: ObservableObject {
 
         // 3. ffmpeg (needed for HD)
         if ffmpegPath == nil {
-            setStatus("Downloading ffmpeg (for HD video)…")
+            setStatus("Preparing video tools…")
             let target = binDir.appendingPathComponent("ffmpeg")
             for url in ffmpegURLs {
                 guard let archive = try? fetch(url) else { continue }
@@ -363,7 +363,7 @@ final class VideoEngine {
         } catch {
             queue.async {
                 self.finished = true
-                self.onEvent(.failed("Could not start yt-dlp: \(error.localizedDescription)"))
+                self.onEvent(.failed("Could not start the video download: \(error.localizedDescription)"))
             }
         }
     }
@@ -397,7 +397,12 @@ final class VideoEngine {
             lastProgress = now
             onEvent(.progress(downloaded: downloaded, total: total, speed: speed))
         } else if let r = line.range(of: "ERROR: ") {
-            lastError = String(line[r.upperBound...])
+            var msg = String(line[r.upperBound...])
+            // "[youtube] abc123: Sign in to confirm…" -> "Sign in to confirm…"
+            if msg.hasPrefix("["), let close = msg.range(of: "]: ") ?? msg.range(of: ": ") {
+                msg = String(msg[close.upperBound...])
+            }
+            lastError = msg
         }
     }
 
@@ -413,9 +418,9 @@ final class VideoEngine {
         } else if status == 0, let path = filePath {
             onEvent(.completed(URL(fileURLWithPath: path)))
         } else if status == 0 {
-            onEvent(.failed("yt-dlp finished but did not report a file."))
+            onEvent(.failed("The video download finished without a file. Try again."))
         } else {
-            onEvent(.failed(lastError ?? "yt-dlp stopped with error code \(status)."))
+            onEvent(.failed(lastError ?? "The video download stopped (error \(status)). Try again."))
         }
     }
 }

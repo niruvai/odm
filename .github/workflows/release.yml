@@ -1,0 +1,43 @@
+# Builds ODM.app on every push to main and publishes it as a GitHub Release.
+# The app checks the latest release and offers "Update Now" to its users.
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history: the build number is the commit count
+
+      - name: Build universal ODM.app
+        run: |
+          chmod +x build.sh
+          UNIVERSAL=1 ./build.sh
+          ditto -c -k --keepParent build/ODM.app build/ODM.zip
+          echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git log -1 --pretty=%B > notes.txt
+          gh release create "build-$BUILD" build/ODM.zip \
+            --title "ODM build $BUILD" \
+            --notes-file notes.txt \
+            --latest

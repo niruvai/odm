@@ -15,6 +15,7 @@ struct ODMApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About ODM") { Author.showAboutPanel() }
+                Button("Check for Updates…") { Updater.shared.check(userInitiated: true) }
             }
             CommandGroup(replacing: .newItem) {
                 Button("Add Download…") {
@@ -62,6 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         )
         server.start()
         self.server = server
+
+        // Updates from GitHub Releases, and keep the unpacked Chrome extension in sync with this build
+        Updater.shared.start()
+        DownloadManager.shared.syncChromeExtension()
 
         // odm://add?url=…&filename=…  (for bookmarklets / other apps)
         NSAppleEventManager.shared().setEventHandler(

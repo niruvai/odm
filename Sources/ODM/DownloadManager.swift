@@ -241,10 +241,10 @@ final class DownloadManager: ObservableObject {
             } else if lower.contains("not a bot") || lower.contains("sign in to confirm") {
                 item.errorMessage = Prefs.useBrowserCookies
                     ? "YouTube asked to confirm you're not a bot. Open the video in Chrome (signed in to YouTube) and press ODM's Download button there, so the extension can pass your sign-in."
-                    : "YouTube asked to confirm you're not a bot. Signing in fixes this: use your Chrome cookies and retry."
+                    : "YouTube asked to confirm you're not a bot. Signing in fixes this: press “Use my browser sign-in and retry”."
             } else {
                 item.errorMessage = message.contains("403")
-                ? "The site refused the download (HTTP 403). Try again later, or turn on “Use Chrome cookies” in Settings → Video."
+                ? "The site refused the download (HTTP 403). Try again later, or press “Use my browser sign-in and retry”."
                 : message
             }
             item.speed = 0
@@ -449,6 +449,23 @@ final class DownloadManager: ObservableObject {
             try? fm.createDirectory(atPath: item.directory, withIntermediateDirectories: true)
             NSWorkspace.shared.open(URL(fileURLWithPath: item.directory))
         }
+    }
+
+    /// After an app update, refresh the unpacked extension folder Chrome loads from (if the user
+    /// installed it), so the extension only needs a reload in chrome://extensions.
+    func syncChromeExtension() {
+        let fm = FileManager.default
+        let dest = FileUtil.appSupportDir.appendingPathComponent("ChromeExtension")
+        guard let src = Bundle.main.resourceURL?.appendingPathComponent("ChromeExtension"),
+              fm.fileExists(atPath: src.path), fm.fileExists(atPath: dest.path) else { return }
+        func version(_ dir: URL) -> String? {
+            guard let data = try? Data(contentsOf: dir.appendingPathComponent("manifest.json")),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+            return json["version"] as? String
+        }
+        guard version(src) != version(dest) else { return }
+        try? fm.removeItem(at: dest)
+        try? fm.copyItem(at: src, to: dest)
     }
 
     /// Copies the bundled Chrome extension to Application Support and shows it in Finder.

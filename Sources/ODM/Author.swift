@@ -83,6 +83,8 @@ struct AboutView: View {
                 linkButton("GitHub", "chevron.left.forwardslash.chevron.right", Author.github)
             }
 
+            UpdateStatusView()
+
             Text("© 2026 \(Author.name). Released under the MIT License — keep this notice and the author's name when you share or modify ODM.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

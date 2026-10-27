@@ -154,7 +154,7 @@ chrome.runtime.onInstalled.addListener(() => {
     });
     chrome.contextMenus.create({
       id: "odm-video",
-      title: "Download video with ODM (yt-dlp)",
+      title: "Download video with ODM",
       contexts: ["page", "link", "video"],
     });
   });

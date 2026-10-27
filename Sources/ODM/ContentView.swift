@@ -18,6 +18,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 170, ideal: 200)
         } detail: {
             VStack(spacing: 0) {
+                UpdateBanner()
                 table
                 if let item = singleSelection {
                     Divider()
@@ -274,7 +275,7 @@ struct CellView: View {
 
     /// While a video waits for yt-dlp / Deno / ffmpeg to download, say so.
     private var statusText: String {
-        if item.kind == .video, item.status == .connecting, let s = tools.status { return s }
+        if item.kind == .video, item.status == .connecting, tools.status != nil { return "Preparing…" }
         return item.status.label
     }
 

@@ -33,10 +33,10 @@ struct AddDownloadView: View {
             Picker("Download as", selection: $ui.addKind) {
                 Text("Auto").tag("auto")
                 Text("File").tag("file")
-                Text("Video page (yt-dlp)").tag("video")
+                Text("Video page").tag("video")
             }
             .pickerStyle(.segmented)
-            .help("Auto sends YouTube, Facebook, Vimeo… pages to yt-dlp and everything else to the file downloader.")
+            .help("Auto treats YouTube, Facebook, Vimeo… pages as videos and everything else as files.")
 
             if ui.addKind != "file" {
                 Picker("Video quality", selection: $ui.addQuality) {
@@ -143,7 +143,7 @@ struct DetailPanel: View {
                 info("Time left", item.status == .downloading ? (Fmt.eta(item.eta).isEmpty ? "—" : Fmt.eta(item.eta)) : "—")
                 info("Connections", item.status == .downloading ? "\(item.connections)" : "—")
                 if item.kind == .video {
-                    info("Source", "yt-dlp · \(VideoQuality.label(for: item.videoQuality))")
+                    info("Type", "Video · \(VideoQuality.label(for: item.videoQuality))")
                 } else {
                     info("Resume", item.totalBytes < 0 && item.status != .completed ? "—" : (item.resumable ? "Supported" : "Not supported"))
                 }
@@ -323,7 +323,6 @@ struct SettingsView: View {
 // MARK: - Video settings (yt-dlp / ffmpeg)
 
 struct VideoSettingsView: View {
-    @ObservedObject private var ytdlp = YtDlp.shared
     @AppStorage(Prefs.videoQualityKey) private var quality = "1080"
     @AppStorage(Prefs.browserCookiesKey) private var useCookies = false
 
@@ -335,35 +334,8 @@ struct VideoSettingsView: View {
                 }
             }
 
-            LabeledContent("yt-dlp") {
-                HStack {
-                    if let v = ytdlp.version {
-                        Label("Installed (\(v))", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    } else {
-                        Text("Added automatically on first video")
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button(ytdlp.version == nil ? "Install Tools" : "Update") { ytdlp.install() }
-                        .disabled(ytdlp.isInstalling)
-                }
-            }
-            toolRow("Deno", path: ytdlp.denoPath, missing: "Needed for YouTube — added automatically")
-            toolRow("ffmpeg", path: ytdlp.ffmpegPath, missing: "Needed for HD — added automatically")
-
-            if let s = ytdlp.status {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text(s).font(.caption)
-                }
-            }
-            if let e = ytdlp.lastError {
-                Text(e).font(.caption).foregroundStyle(.red)
-            }
-
-            Toggle("Use my browser sign-in (fixes “confirm you're not a bot” and HTTP 403)", isOn: $useCookies)
-            Text("Uses the cookies the ODM Chrome extension sends when you press its Download button. If there are none yet, yt-dlp reads Chrome directly and macOS asks once — choose “Always Allow”.")
+            Toggle("Use my browser sign-in for videos", isOn: $useCookies)
+            Text("Turn this on if a site says “confirm you're not a bot” or refuses the download. ODM then uses the sign-in the ODM Chrome extension sends when you press its Download button.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -374,21 +346,6 @@ struct VideoSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
-        .onAppear { ytdlp.refreshVersion() }
-        .id(ytdlp.toolsChanged)
-    }
-
-    private func toolRow(_ name: String, path: String?, missing: String) -> some View {
-        LabeledContent(name) {
-            if let path = path {
-                Label((path as NSString).abbreviatingWithTildeInPath, systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            } else {
-                Text(missing).foregroundStyle(.secondary)
-            }
-        }
     }
 }
 
