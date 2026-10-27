@@ -131,6 +131,19 @@ chrome.downloads.onCreated.addListener(async (item) => {
   }
 });
 
+// After install / update, add the YouTube buttons to tabs that are already open
+// (otherwise they only appear after the page is refreshed).
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    const tabs = await chrome.tabs.query({ url: ["https://www.youtube.com/*", "https://m.youtube.com/*"] });
+    for (const tab of tabs) {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["youtube.js"] }).catch(() => {});
+    }
+  } catch (e) {
+    /* ignore */
+  }
+});
+
 // Right-click menu: "Download with ODM"
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
