@@ -8,6 +8,18 @@
   if (window.__odmYouTubeLoaded) return; // injected twice (manifest + after an update)
   window.__odmYouTubeLoaded = true;
 
+  // Each copy of this script marks its buttons. After the extension is updated, the new copy
+  // replaces the old copy's buttons (whose clicks can no longer reach the extension).
+  const INSTANCE = String(Date.now()) + Math.random().toString(36).slice(2);
+
+  function extensionAlive() {
+    try {
+      return !!(chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
   const QUALITIES = [
     ["best", "Best available"],
     ["1080", "1080p"],
@@ -94,6 +106,7 @@
     const wrap = document.createElement("div");
     wrap.id = id;
     wrap.className = "odm-wrap";
+    wrap.dataset.odmInstance = INSTANCE;
 
     const btn = document.createElement("button");
     btn.className = "odm-btn";
@@ -139,7 +152,7 @@
     const player = document.querySelector("#movie_player");
     const existing = document.getElementById("odm-player");
     if (!player) return;
-    if (existing && player.contains(existing)) return;
+    if (existing && player.contains(existing) && existing.dataset.odmInstance === INSTANCE) return;
     existing?.remove();
     player.appendChild(buildButton("odm-player", "Download"));
   }
@@ -153,12 +166,19 @@
       document.querySelector("#above-the-fold #top-row");
     const existing = document.getElementById("odm-inline");
     if (!row) return;
-    if (existing && row.contains(existing)) return;
+    if (existing && row.contains(existing) && existing.dataset.odmInstance === INSTANCE) return;
     existing?.remove();
     row.appendChild(buildButton("odm-inline", "ODM"));
   }
 
+  let timer = null;
+
   function inject() {
+    if (!extensionAlive()) {
+      // This copy was left behind by an extension update; stop and let the new copy take over.
+      if (timer) clearInterval(timer);
+      return;
+    }
     if (!isVideoPage()) {
       document.getElementById("odm-player")?.remove();
       document.getElementById("odm-inline")?.remove();
@@ -175,6 +195,6 @@
   document.addEventListener("click", closeMenus);
   // YouTube is a single-page app: re-check after navigation and periodically.
   window.addEventListener("yt-navigate-finish", () => setTimeout(inject, 300));
-  setInterval(inject, 1500);
+  timer = setInterval(inject, 1500);
   inject();
 })();
