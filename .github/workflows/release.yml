@@ -36,6 +36,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if gh release view "build-$BUILD" >/dev/null 2>&1; then
+            echo "Release build-$BUILD already exists; nothing to publish."
+            exit 0
+          fi
           git log -1 --pretty=%B > notes.txt
           gh release create "build-$BUILD" build/ODM.zip \
             --title "ODM build $BUILD" \
