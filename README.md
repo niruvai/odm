@@ -1,43 +1,46 @@
 # ODM — Open Source Download Manager for macOS
 
-**ODM** is a free, open-source download manager for macOS in the spirit of Internet Download Manager (IDM) for Windows.
-Built with SwiftUI, no Xcode required — Apple's Command Line Tools are enough.
+**[English](#english) · [বাংলা](#bangla)**
 
-- **Multi-connection downloads** (1–32 connections per file) with IDM-style dynamic segmentation
-- **Pause / resume**, survives network drops and app restarts
-- **Download queue**, category folders, menu-bar icon, completion notifications
-- **Chrome / Edge / Brave extension** that hands browser downloads to the app (with cookies and referrer)
-- **Web video downloads via [yt-dlp](https://github.com/yt-dlp/yt-dlp)** — a Download button on YouTube videos, plus a “Download video” button for any page yt-dlp supports. yt-dlp, Deno and ffmpeg are fetched automatically
+**ODM** is a free, open-source download manager for macOS, in the spirit of Internet Download Manager (IDM) for Windows.
+**ODM** হলো macOS-এর জন্য একটা ফ্রি, ওপেন-সোর্স ডাউনলোড ম্যানেজার, Windows-এর IDM-এর মতো।
 
-> Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission. Respect each site's terms of service.
+Made by **[Nirob Islam](https://www.nirobislam.com/en/)**
 
 ---
 
-## বাংলায়
+## English
 
-### কী কী আছে
+### Features
 
-- **মাল্টি-কানেকশন ডাউনলোড**: একটা ফাইল একসাথে ৮টা (১–৩২ পর্যন্ত সেট করা যায়) আলাদা কানেকশনে নামে
-- **ডাইনামিক সেগমেন্টেশন** (IDM-এর আসল কৌশল): কোনো কানেকশন আগে শেষ হলে সে সবচেয়ে বড় বাকি অংশের অর্ধেক নিজে নিয়ে নেয়
-- **Pause / Resume**: নেট কেটে গেলে বা অ্যাপ বন্ধ করলেও যেখানে থেমেছিল সেখান থেকে শুরু
-- **নিজে থেকে আবার চেষ্টা**: কানেকশন ড্রপ হলে প্রতিটা অংশ ৮ বার পর্যন্ত আবার চেষ্টা করে
-- **ডাউনলোড কিউ**: একসাথে কয়টা ডাউনলোড চলবে ঠিক করা যায় (ডিফল্ট ৩)
-- **ধরন অনুযায়ী ফোল্ডার**: Video, Music, Compressed, Programs, Documents, Images
-- **Chrome / Edge / Brave এক্সটেনশন**: ব্রাউজারের ডাউনলোড নিজে থেকেই অ্যাপে চলে যায়, কুকি আর রেফারার সহ
-- **ভিডিও ডাউনলোড (yt-dlp)**: YouTube ভিডিওর উপর **Download** বাটন আর কোয়ালিটি মেনু; এক্সটেনশনের পপআপ থেকে যেকোনো ভিডিও পেজ (Facebook, Vimeo ইত্যাদি)
-- মেনু বারে আইকন, Dock-এ চলমান ডাউনলোডের সংখ্যা, ডাউনলোডের সময় ম্যাক ঘুমায় না
-- উইন্ডোতে লিংক ড্র্যাগ করে ছাড়লেই ডাউনলোড শুরু
+- **Multi-connection downloads**: each file downloads over 8 parallel connections (adjustable from 1 to 32)
+- **Dynamic segmentation** (IDM's core trick): when a connection finishes early, it takes over half of the largest remaining part, so every connection stays busy until the end
+- **Pause / Resume**: continues where it stopped, even after a network drop or an app restart
+- **Automatic retries**: a dropped connection retries each part up to 8 times
+- **Download queue**: choose how many downloads run at the same time (default 3)
+- **Category folders**: Video, Music, Compressed, Programs, Documents, Images
+- **Chrome / Edge / Brave extension**: browser downloads go to ODM automatically, with cookies and referrer, so sites that need a login still work
+- **Video downloads**: a **⬇ ODM** button under YouTube videos and a **Download** button on the player, with a quality menu (Best, 1080p, 720p, 480p, 360p, audio only); a **Download video** button in the extension popup for other sites (Facebook, Vimeo and more)
+- **Automatic updates**: when a new version is out, ODM shows **Update Now** inside the app
+- Menu-bar icon, active-download count on the Dock icon, and your Mac doesn't sleep while downloading
+- Drag a link onto the window to start a download
 
-### যা লাগবে
+### Requirements
 
-- macOS 13 (Ventura) বা নতুন
-- Apple Command Line Tools (পুরো Xcode লাগবে না)
+- macOS 13 (Ventura) or newer
+- Apple Silicon or Intel Mac
 
-```bash
-xcode-select --install
-```
+### Install
 
-### বিল্ড ও ইনস্টল
+1. Download **ODM.zip** from the [latest release](https://github.com/niruvai/odm/releases/latest)
+2. Unzip it and drag **ODM.app** into your **Applications** folder
+3. Open ODM. The first time, macOS may say it can't verify the developer:
+   - Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**, or
+   - Run this once in Terminal: `xattr -dr com.apple.quarantine /Applications/ODM.app`
+
+#### Or build from source
+
+You need Apple's Command Line Tools (`xcode-select --install`); full Xcode is not required.
 
 ```bash
 git clone https://github.com/niruvai/odm.git
@@ -45,90 +48,184 @@ cd odm
 ./build.sh --install
 ```
 
-এটা কম্পাইল করে `/Applications/ODM.app` বানাবে এবং চালু করবে।
-এক্সটার্নাল ড্রাইভে (exFAT) রাখা ফোল্ডার থেকেও বিল্ড করা যায়। অ্যাপটা ভেতরের ডিস্কে সাইন করা হয়।
+This builds ODM and installs it to `/Applications/ODM.app`. Building from a folder on an external drive (exFAT) also works.
 
-### আপডেট
+### Install the Chrome extension
 
-ODM নিজে থেকে নতুন ভার্সন খোঁজে (চালু হওয়ার সময় আর প্রতি ৬ ঘণ্টায়)। নতুন ভার্সন এলে উইন্ডোর উপরে নীল ব্যানারে **Update Now** দেখাবে। চাপলে ODM নতুন ভার্সন নামিয়ে বসিয়ে আবার চালু হয়, চলমান ডাউনলোড যেখানে ছিল সেখান থেকে চলতে থাকে। হাতে চেক করতে: মেনু **ODM → Check for Updates…**
+1. Open ODM → **Settings (⌘,) → Browser → Show Extension Folder**
+2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top right)
+3. Click **Load unpacked**, press **⌘⇧G** and enter: `~/Library/Application Support/ODM/ChromeExtension`
 
-রেপোর `main` ব্রাঞ্চে প্রতিটা পুশের পর GitHub Actions নিজে অ্যাপ বিল্ড করে একটা Release বানায় (`build-<নম্বর>`), সেখান থেকেই আপডেট আসে।
+After ODM updates, click the **↻ Reload** button for ODM in `chrome://extensions`.
+
+Tip: in Chrome **Settings → Downloads**, turn off **“Ask where to save each file before downloading”**.
+
+### How to use
+
+| Task | How |
+|---|---|
+| New download | **⌘N**: a copied link is filled in automatically; paste several links, one per line |
+| From Chrome | Download as usual; ODM takes over automatically |
+| YouTube video | Click **⬇ ODM** under the video (or **Download** on the player) and pick a quality |
+| Other video sites | Click the ODM extension icon → **Download video**, or right-click the page → **Download video with ODM** |
+| Pause / Resume | Toolbar buttons or right-click |
+| Pause all / Resume all | **⇧⌘P** / **⇧⌘R** |
+| Open a file | Double-click it in the list |
+| Settings | **⌘,** |
+
+Files are saved to `~/Downloads/ODM/<category>/`.
+
+### Updates
+
+ODM checks for a new version when it starts and every 6 hours. When one is available, a blue banner appears at the top of the window: click **Update Now**. ODM downloads the new version, replaces itself and restarts, and unfinished downloads continue where they left off. To check yourself: menu **ODM → Check for Updates…**
+
+Every push to the `main` branch is built automatically by GitHub Actions and published as a release (`build-<number>`); that is where updates come from.
+
+### Troubleshooting
+
+- **“Sign in to confirm you're not a bot”** or **HTTP 403** on a video: turn on **Settings → Video → Use my browser sign-in**, then send the video again with the ODM button on the page (the extension passes your sign-in to ODM)
+- **No ODM button on YouTube**: refresh the page (**⌘R**)
+- **Extension says ODM is not running**: open the ODM app
+- The first video download takes a minute longer while ODM prepares its video tools
+
+> Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission. Respect each site's terms of service.
+
+### Limitations
+
+- If a server doesn't support byte ranges, the file downloads over one connection and can't be resumed
+- Some downloads that start from a POST form can't be handed to ODM
+- Private or members-only videos can't be downloaded
+- ODM is not notarized by Apple, so macOS asks for confirmation the first time you open it
+
+---
+
+<a id="bangla"></a>
+
+## বাংলা
+
+### কী কী আছে
+
+- **মাল্টি-কানেকশন ডাউনলোড**: প্রতিটা ফাইল একসাথে ৮টা আলাদা কানেকশনে নামে (১ থেকে ৩২ পর্যন্ত বদলানো যায়)
+- **ডাইনামিক সেগমেন্টেশন** (IDM-এর আসল কৌশল): কোনো কানেকশন আগে শেষ হলে সে সবচেয়ে বড় বাকি অংশের অর্ধেক নিজে নিয়ে নেয়, তাই শেষ পর্যন্ত সব কানেকশন কাজে থাকে
+- **Pause / Resume**: নেট কেটে গেলে বা অ্যাপ বন্ধ করলেও যেখানে থেমেছিল সেখান থেকে আবার শুরু হয়
+- **নিজে থেকে আবার চেষ্টা**: কানেকশন ড্রপ হলে প্রতিটা অংশ ৮ বার পর্যন্ত আবার চেষ্টা করে
+- **ডাউনলোড কিউ**: একসাথে কয়টা ডাউনলোড চলবে ঠিক করা যায় (ডিফল্ট ৩)
+- **ধরন অনুযায়ী ফোল্ডার**: Video, Music, Compressed, Programs, Documents, Images
+- **Chrome / Edge / Brave এক্সটেনশন**: ব্রাউজারের ডাউনলোড নিজে থেকেই ODM-এ চলে যায়, কুকি আর রেফারার সহ, তাই লগইন লাগে এমন সাইটেও কাজ করে
+- **ভিডিও ডাউনলোড**: YouTube ভিডিওর নিচে **⬇ ODM** বাটন আর প্লেয়ারের উপর **Download** বাটন, কোয়ালিটি মেনু সহ (Best, 1080p, 720p, 480p, 360p, শুধু অডিও); অন্য সাইটের (Facebook, Vimeo ইত্যাদি) জন্য এক্সটেনশনের পপআপে **Download video** বাটন
+- **অটো-আপডেট**: নতুন ভার্সন এলে অ্যাপের ভেতরেই **Update Now** দেখায়
+- মেনু বারে আইকন, Dock-এ চলমান ডাউনলোডের সংখ্যা, আর ডাউনলোডের সময় ম্যাক ঘুমিয়ে পড়ে না
+- উইন্ডোতে লিংক টেনে এনে ছাড়লেই ডাউনলোড শুরু হয়
+
+### যা লাগবে
+
+- macOS 13 (Ventura) বা নতুন
+- Apple Silicon বা Intel ম্যাক
+
+### ইনস্টল
+
+1. [সর্বশেষ রিলিজ](https://github.com/niruvai/odm/releases/latest) থেকে **ODM.zip** নামান
+2. জিপ খুলে **ODM.app** টেনে **Applications** ফোল্ডারে রাখুন
+3. ODM খুলুন। প্রথমবার macOS বলতে পারে ডেভেলপার যাচাই করা যায়নি। তখন:
+   - **System Settings → Privacy & Security**-এ গিয়ে নিচে **Open Anyway** চাপুন, অথবা
+   - Terminal-এ একবার চালান: `xattr -dr com.apple.quarantine /Applications/ODM.app`
+
+#### অথবা সোর্স থেকে বিল্ড করুন
+
+Apple-এর Command Line Tools লাগবে (`xcode-select --install`), পুরো Xcode লাগবে না।
+
+```bash
+git clone https://github.com/niruvai/odm.git
+cd odm
+./build.sh --install
+```
+
+এটা ODM বিল্ড করে `/Applications/ODM.app`-এ ইনস্টল করে দেয়। এক্সটার্নাল ড্রাইভে (exFAT) রাখা ফোল্ডার থেকেও বিল্ড করা যায়।
 
 ### Chrome এক্সটেনশন বসানো
 
 1. ODM খুলে **Settings (⌘,) → Browser → Show Extension Folder** চাপুন
-2. Chrome-এ যান `chrome://extensions` → ডানদিকে উপরে **Developer mode** চালু করুন
-3. **Load unpacked** চেপে, ⌘⇧G দিয়ে এই পাথ দিন: `~/Library/Application Support/ODM/ChromeExtension`
+2. Chrome-এ `chrome://extensions` খুলুন, ডানদিকে উপরে **Developer mode** চালু করুন
+3. **Load unpacked** চাপুন, **⌘⇧G** দিয়ে এই পাথ দিন: `~/Library/Application Support/ODM/ChromeExtension`
 
-এক্সটেনশন আপডেট হলে আবার **Show Extension Folder** চাপুন, তারপর `chrome://extensions`-এ ODM-এর ↻ (Reload) বাটন চাপুন।
+ODM আপডেট হওয়ার পর `chrome://extensions`-এ ODM-এর **↻ Reload** বাটন চাপুন।
 
-টিপ: Chrome Settings → Downloads → **“Ask where to save each file”** বন্ধ রাখুন।
-
-### ভিডিও ডাউনলোড
-
-- **YouTube**: ভিডিওর উপর মাউস রাখলে ডানদিকে উপরে নীল **Download** বাটন আসবে → কোয়ালিটি বেছে নিন
-- **অন্য সাইট**: এক্সটেনশনের আইকনে চাপুন → **Download video**, অথবা পেজে রাইট-ক্লিক → **Download video with ODM**
-- অ্যাপে ⌘N দিয়ে YouTube/Facebook/Vimeo লিংক দিলেও নিজে থেকে ভিডিও হিসেবে নামবে
-
-প্রথম ভিডিওর সময় ODM নিজে থেকে তিনটা টুল নামিয়ে নেয় (`~/Library/Application Support/ODM/bin`):
-
-| টুল | কেন লাগে |
-|---|---|
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | ভিডিও ডাউনলোডার, প্রতি ৩ দিনে নিজে আপডেট হয় |
-| [Deno](https://deno.com) | YouTube-এর জাভাস্ক্রিপ্ট চ্যালেঞ্জ সমাধানে yt-dlp-এর দরকার |
-| ffmpeg | HD ভিডিও আর অডিও জোড়া লাগিয়ে একটা MP4 বানায় |
-
-Homebrew দিয়ে আগে থেকে বসানো থাকলে সেগুলোই ব্যবহার হয়। Settings → Video-তে সব টুলের অবস্থা দেখা যায়।
-
-**HTTP 403 এলে:** ODM নিজে দুইবার আবার চেষ্টা করে (প্রথমে yt-dlp আপডেট করে, তারপর অন্য YouTube ক্লায়েন্ট দিয়ে)। তারপরও না হলে Settings → Video → **Use Chrome cookies** চালু করে আবার Resume দিন।
-
-> যে ভিডিও ডাউনলোডের অধিকার আপনার আছে শুধু সেগুলোই নামান: নিজের আপলোড, Creative Commons, বা মালিকের অনুমতি নিয়ে।
+টিপ: Chrome-এর **Settings → Downloads**-এ **“Ask where to save each file before downloading”** বন্ধ রাখুন।
 
 ### ব্যবহার
 
 | কাজ | কীভাবে |
 |---|---|
-| নতুন ডাউনলোড | ⌘N (কপি করা লিংক নিজে বসে যায়), একসাথে অনেক লিংক এক লাইনে একটা করে |
-| থামানো / চালু | টুলবারের Pause / Resume, অথবা রাইট-ক্লিক |
-| সব থামানো / সব চালু | ⇧⌘P / ⇧⌘R |
+| নতুন ডাউনলোড | **⌘N**: কপি করা লিংক নিজে বসে যায়; একসাথে অনেক লিংক দিতে চাইলে এক লাইনে একটা করে |
+| Chrome থেকে | স্বাভাবিকভাবে ডাউনলোড করুন, ODM নিজেই ধরে নেবে |
+| YouTube ভিডিও | ভিডিওর নিচে **⬇ ODM** (অথবা প্লেয়ারের উপর **Download**) চেপে কোয়ালিটি বেছে নিন |
+| অন্য ভিডিও সাইট | এক্সটেনশনের আইকন → **Download video**, অথবা পেজে রাইট-ক্লিক → **Download video with ODM** |
+| থামানো / চালু | টুলবারের বাটন অথবা রাইট-ক্লিক |
+| সব থামানো / সব চালু | **⇧⌘P** / **⇧⌘R** |
 | ফাইল খোলা | তালিকায় ডাবল-ক্লিক |
-| সেটিংস | ⌘, |
+| সেটিংস | **⌘,** |
 
-ফাইল সেভ হয় `~/Downloads/ODM/<ধরন>/` এ।
+ফাইল সেভ হয় `~/Downloads/ODM/<ধরন>/`-এ।
+
+### আপডেট
+
+ODM চালু হওয়ার সময় আর প্রতি ৬ ঘণ্টায় নতুন ভার্সন খোঁজে। নতুন ভার্সন পেলে উইন্ডোর উপরে নীল ব্যানার আসে, সেখানে **Update Now** চাপুন। ODM নতুন ভার্সন নামিয়ে নিজেকে বদলে আবার চালু হয়, আর চলমান ডাউনলোড যেখানে ছিল সেখান থেকে চলতে থাকে। নিজে চেক করতে চাইলে: মেনু **ODM → Check for Updates…**
+
+`main` ব্রাঞ্চে প্রতিটা পুশের পর GitHub Actions নিজে অ্যাপ বিল্ড করে একটা রিলিজ (`build-<নম্বর>`) বানায়। আপডেট সেখান থেকেই আসে।
+
+### সমস্যা হলে
+
+- ভিডিওতে **“Sign in to confirm you're not a bot”** বা **HTTP 403** এলে: **Settings → Video → Use my browser sign-in** চালু করুন, তারপর পেজের ODM বাটন দিয়ে ভিডিওটা আবার পাঠান (এক্সটেনশন আপনার লগইন ODM-কে দিয়ে দেয়)
+- **YouTube-এ ODM বাটন দেখা যাচ্ছে না**: পেজ রিফ্রেশ করুন (**⌘R**)
+- **এক্সটেনশন বলছে ODM চলছে না**: ODM অ্যাপটা খুলুন
+- প্রথম ভিডিও ডাউনলোডে এক মিনিট বেশি লাগে, কারণ ODM তখন ভিডিওর টুলগুলো প্রস্তুত করে
+
+> যে ভিডিও ডাউনলোডের অধিকার আপনার আছে শুধু সেগুলোই নামান: নিজের আপলোড, Creative Commons, বা মালিকের অনুমতি নিয়ে। প্রতিটা সাইটের নিয়ম মেনে চলুন।
 
 ### সীমাবদ্ধতা
 
-- যে সার্ভার “Range” রিকোয়েস্ট সমর্থন করে না, সেখানে একটাই কানেকশন চলে আর Resume হয় না
-- POST ফর্ম দিয়ে শুরু হওয়া কিছু ডাউনলোড অ্যাপে পাঠানো যায় না
-- লগইন লাগে এমন ভিডিও (প্রাইভেট, মেম্বারশিপ) yt-dlp দিয়ে নামবে না
-- অ্যাপটি ad-hoc সাইন করা, তাই প্রতিটা ম্যাকে `build.sh` দিয়ে বানিয়ে নেওয়াই সহজ
+- যে সার্ভার byte range সমর্থন করে না, সেখানে একটাই কানেকশন চলে আর Resume হয় না
+- POST ফর্ম দিয়ে শুরু হওয়া কিছু ডাউনলোড ODM-এ পাঠানো যায় না
+- প্রাইভেট বা মেম্বারশিপ ভিডিও নামানো যায় না
+- ODM Apple-এর notarization করা নয়, তাই প্রথমবার খোলার সময় macOS নিশ্চিত হতে চায়
 
-## Project layout
+---
+
+## Project layout / প্রজেক্টের গঠন
 
 ```
 Sources/ODM/
   DownloadEngine.swift   multi-connection engine, dynamic segmentation, retries
   Prober.swift           size, file name and range support detection
-  YtDlp.swift            yt-dlp / Deno / ffmpeg setup and the video download runner
+  YtDlp.swift            video tools setup (yt-dlp, Deno, ffmpeg) and the video download runner
   DownloadManager.swift  list, queue, persistence, notifications
+  Updater.swift          in-app updates from GitHub Releases
   LocalServer.swift      127.0.0.1:9614 bridge for the browser extension
   ContentView.swift      main window
   OtherViews.swift       add dialog, detail panel, settings, menu bar
+  Author.swift           About window and credits
   UIState.swift          window/dialog state (no @State, so it builds without Xcode)
 ChromeExtension/         browser extension (Manifest V3)
 build.sh                 builds, signs and installs ODM.app
+.github/workflows/       builds and publishes a release on every push
 ```
 
-## Author
+Video downloads use [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Deno](https://deno.com) and [FFmpeg](https://ffmpeg.org), which ODM downloads on first use. Each has its own license.
+ভিডিও ডাউনলোডে [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Deno](https://deno.com) আর [FFmpeg](https://ffmpeg.org) ব্যবহার হয়, ODM প্রথমবার এগুলো নিজে নামিয়ে নেয়। প্রত্যেকটার নিজস্ব লাইসেন্স আছে।
+
+## Author / নির্মাতা
 
 **ODM is made by Nirob Islam.**
+**ODM তৈরি করেছেন নিরব ইসলাম।**
 
 - Website: https://www.nirobislam.com/en/
 - Facebook: https://www.facebook.com/mdnurunnabiislamniroob
 - Instagram: https://www.instagram.com/niru_bhai_0/
 
 If you share, fork or build on ODM, please keep the author's name and the license notice.
+ODM শেয়ার, fork বা এর উপর ভিত্তি করে কিছু বানালে নির্মাতার নাম আর লাইসেন্সের লেখা রেখে দিন।
 
-## License
+## License / লাইসেন্স
 
-MIT — © 2026 Nirob Islam, see [LICENSE](LICENSE). The copyright notice and author credit must be kept in copies and modified versions. yt-dlp is downloaded separately at runtime and has its own license (Unlicense).
+MIT — © 2026 Nirob Islam, see [LICENSE](LICENSE). The copyright notice and author credit must be kept in copies and modified versions.
+MIT লাইসেন্স — © ২০২৬ নিরব ইসলাম, বিস্তারিত [LICENSE](LICENSE)-এ। কপি বা পরিবর্তিত সংস্করণে copyright notice আর নির্মাতার নাম রাখা বাধ্যতামূলক।
