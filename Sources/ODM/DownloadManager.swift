@@ -144,7 +144,8 @@ final class DownloadManager: ObservableObject {
 
         // Attempt 0: normal. 1: after a 403, refresh yt-dlp. 2: also try other YouTube player clients.
         let attempt = item.videoAttempt
-        YtDlp.shared.prepare(forceUpdate: attempt == 1) { [weak self] result in
+        YtDlp.shared.prepare(forceUpdate: attempt == 1) { [weak self, weak item] result in
+            guard let item = item else { return }
             guard let self = self, item.runToken == token, item.status == .connecting else { return }
             switch result {
             case .failure(let error):
