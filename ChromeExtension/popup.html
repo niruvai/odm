@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font: 13px -apple-system, BlinkMacSystemFont, sans-serif; width: 240px; margin: 0; padding: 14px; color: #1d1d1f; }
+  h1 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  h1 img { width: 20px; height: 20px; }
+  .status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #555; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #bbb; }
+  .dot.on { background: #34c759; }
+  .dot.off { background: #ff3b30; }
+  label { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  p { color: #777; font-size: 11.5px; margin: 10px 0 0; line-height: 1.4; }
+  .video { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,.25); }
+  .vtitle { font-weight: 600; margin-bottom: 8px; }
+  .row { display: flex; gap: 6px; }
+  select { flex: 0 0 auto; font: inherit; padding: 4px; border-radius: 6px; }
+  #grab { flex: 1; font: inherit; font-weight: 600; padding: 6px 8px; border: 0; border-radius: 6px; background: #1a5ae6; color: #fff; cursor: pointer; }
+  #grab:disabled { opacity: .5; cursor: default; }
+  .small { font-size: 11.5px; color: #777; margin-top: 6px; min-height: 14px; }
+  @media (prefers-color-scheme: dark) { body { background: #242424; color: #eee; } .status, p { color: #aaa; } }
+</style>
+</head>
+<body>
+  <h1><img src="icons/icon48.png" alt="">ODM</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Checking…</span></div>
+  <label>Send downloads to ODM <input type="checkbox" id="enabled"></label>
+  <div class="video">
+    <div class="vtitle">Video on this page</div>
+    <div class="row">
+      <select id="quality">
+        <option value="best">Best</option>
+        <option value="1080" selected>1080p</option>
+        <option value="720">720p</option>
+        <option value="480">480p</option>
+        <option value="360">360p</option>
+        <option value="audio">Audio only</option>
+      </select>
+      <button id="grab">Download video</button>
+    </div>
+    <div id="grabStatus" class="small"></div>
+  </div>
+  <p>When the app is closed, Chrome downloads files itself as usual. Right-click any link → “Download with ODM”.</p>
+  <script src="popup.js"></script>
+</body>
+</html>
