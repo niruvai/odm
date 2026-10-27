@@ -76,6 +76,15 @@ final class DownloadManager: ObservableObject {
     }
 
     func addVideoFromBrowser(_ r: VideoRequest) {
+        if let cookies = r.cookies, !cookies.isEmpty {
+            CookieStore.save(cookies, for: r.url)
+        }
+        // Same video already in the list and not finished: resume it instead of adding a duplicate.
+        if let existing = items.first(where: { $0.kind == .video && $0.url == r.url && $0.status != .completed }) {
+            if let q = r.quality { existing.videoQuality = q }
+            if !existing.status.isActive { resume(existing) }
+            return
+        }
         add(urlString: r.url, startNow: true, kind: .video, quality: r.quality)
     }
 
@@ -227,9 +236,11 @@ final class DownloadManager: ObservableObject {
             }
             item.status = .failed
             let lower = message.lowercased()
-            if lower.contains("not a bot") || lower.contains("sign in to confirm") {
+            if lower.contains("could not find chrome cookies") || lower.contains("cookies database") {
+                item.errorMessage = "ODM couldn't read Chrome's cookies directly. Open this video in Chrome and press ODM's Download button on the video (or “Download video” in the extension) — that passes your YouTube sign-in to ODM."
+            } else if lower.contains("not a bot") || lower.contains("sign in to confirm") {
                 item.errorMessage = Prefs.useBrowserCookies
-                    ? "YouTube asked to confirm you're not a bot, even with Chrome cookies. Make sure you're signed in to YouTube in Chrome's main profile, then retry."
+                    ? "YouTube asked to confirm you're not a bot. Open the video in Chrome (signed in to YouTube) and press ODM's Download button there, so the extension can pass your sign-in."
                     : "YouTube asked to confirm you're not a bot. Signing in fixes this: use your Chrome cookies and retry."
             } else {
                 item.errorMessage = message.contains("403")

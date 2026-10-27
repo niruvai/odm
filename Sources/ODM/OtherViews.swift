@@ -161,11 +161,11 @@ struct DetailPanel: View {
                             UserDefaults.standard.set(true, forKey: Prefs.browserCookiesKey)
                             manager.resume(item)
                         } label: {
-                            Label(Prefs.useBrowserCookies ? "Retry with Chrome cookies" : "Use Chrome cookies and retry",
+                            Label(Prefs.useBrowserCookies ? "Retry with my browser sign-in" : "Use my browser sign-in and retry",
                                   systemImage: "person.badge.key")
                         }
                         .controlSize(.small)
-                        Text("Uses your YouTube sign-in from Chrome. macOS will ask once — choose “Always Allow”.")
+                        Text("Uses your sign-in from the ODM Chrome extension.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -359,8 +359,8 @@ struct VideoSettingsView: View {
                 Text(e).font(.caption).foregroundStyle(.red)
             }
 
-            Toggle("Use Chrome cookies (helps with “HTTP 403” and age-restricted videos)", isOn: $useCookies)
-            Text("macOS will ask once to let yt-dlp read Chrome's cookie key — choose “Always Allow”.")
+            Toggle("Use my browser sign-in (fixes “confirm you're not a bot” and HTTP 403)", isOn: $useCookies)
+            Text("Uses the cookies the ODM Chrome extension sends when you press its Download button. If there are none yet, yt-dlp reads Chrome directly and macOS asks once — choose “Always Allow”.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

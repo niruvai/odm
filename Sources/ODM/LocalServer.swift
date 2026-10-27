@@ -14,6 +14,7 @@ struct AddRequest: Decodable {
 struct VideoRequest: Decodable {
     let url: String
     let quality: String?
+    let cookies: [BrowserCookie]?   // the site's cookies, so signed-in checks pass
 }
 
 /// Tiny HTTP server on 127.0.0.1 so the browser extension can hand downloads to the app.

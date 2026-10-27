@@ -55,12 +55,39 @@ function baseName(path) {
   return parts[parts.length - 1];
 }
 
+function baseDomain(host) {
+  host = host.toLowerCase();
+  if (host === "youtu.be" || host.endsWith(".youtu.be")) return "youtube.com";
+  return host.split(".").slice(-2).join(".");
+}
+
+// The site's cookies (e.g. your YouTube sign-in), so yt-dlp passes "confirm you're not a bot" checks.
+// They are sent only to the ODM app on this Mac (127.0.0.1).
+async function siteCookies(url) {
+  try {
+    const domain = baseDomain(new URL(url).hostname);
+    const list = await chrome.cookies.getAll({ domain });
+    return list.map((c) => ({
+      domain: c.domain,
+      name: c.name,
+      value: c.value,
+      path: c.path,
+      secure: c.secure,
+      httpOnly: c.httpOnly,
+      hostOnly: c.hostOnly,
+      expirationDate: c.expirationDate ? Math.floor(c.expirationDate) : 0,
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
 async function sendVideo(url, quality) {
   try {
     const r = await fetch(API + "/video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, quality: quality || null }),
+      body: JSON.stringify({ url, quality: quality || null, cookies: await siteCookies(url) }),
     });
     return r.ok;
   } catch (e) {

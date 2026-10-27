@@ -322,7 +322,12 @@ final class VideoEngine {
             args += ["-f", height.map { "b[height<=\($0)]/b" } ?? "b"]
         }
         if Prefs.useBrowserCookies {
-            args += ["--cookies-from-browser", "chrome"]
+            // Prefer the sign-in cookies the extension sent; fall back to reading Chrome directly.
+            if let file = CookieStore.file(for: pageURL) {
+                args += ["--cookies", file.path]
+            } else {
+                args += ["--cookies-from-browser", "chrome"]
+            }
         }
         args += extraArgs
         args.append(pageURL)
@@ -434,5 +439,81 @@ struct LineReader {
         defer { buffer.removeAll() }
         guard let s = String(data: buffer, encoding: .utf8), !s.isEmpty else { return [] }
         return [s]
+    }
+}
+
+// MARK: - Browser sign-in cookies for yt-dlp
+
+/// A cookie as sent by the browser extension (chrome.cookies API shape).
+struct BrowserCookie: Decodable {
+    let domain: String
+    let name: String
+    let value: String
+    let path: String?
+    let secure: Bool?
+    let httpOnly: Bool?
+    let expirationDate: Double?
+    let hostOnly: Bool?
+}
+
+/// Keeps the latest cookies the extension sent for each site (e.g. youtube.com) in a private
+/// Netscape cookies.txt file, which yt-dlp reads with --cookies. Works with any Chrome profile and
+/// needs no Keychain prompt.
+enum CookieStore {
+    static var dir: URL {
+        let d = FileUtil.appSupportDir.appendingPathComponent("cookies", isDirectory: true)
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: d.path) {
+            try? fm.createDirectory(at: d, withIntermediateDirectories: true,
+                                    attributes: [.posixPermissions: 0o700])
+        }
+        return d
+    }
+
+    static func baseDomain(_ host: String) -> String {
+        let h = host.lowercased()
+        if h == "youtu.be" || h.hasSuffix(".youtu.be") { return "youtube.com" }
+        let parts = h.split(separator: ".")
+        return parts.suffix(2).joined(separator: ".")
+    }
+
+    private static func fileURL(for urlString: String) -> URL? {
+        guard let host = URL(string: urlString)?.host else { return nil }
+        let name = baseDomain(host).replacingOccurrences(of: "/", with: "_")
+        return dir.appendingPathComponent(name + ".txt")
+    }
+
+    /// The saved cookies file for this page's site, if the extension has sent one.
+    static func file(for urlString: String) -> URL? {
+        guard let f = fileURL(for: urlString), FileManager.default.fileExists(atPath: f.path) else { return nil }
+        return f
+    }
+
+    static func save(_ cookies: [BrowserCookie], for urlString: String) {
+        guard !cookies.isEmpty, let f = fileURL(for: urlString) else { return }
+        var text = "# Netscape HTTP Cookie File\n# Written by ODM from the browser extension\n\n"
+        for c in cookies {
+            let clean: (String) -> String = { $0.replacingOccurrences(of: "\t", with: " ").replacingOccurrences(of: "\n", with: "") }
+            let hostOnly = c.hostOnly ?? !c.domain.hasPrefix(".")
+            var domain = c.domain
+            if !hostOnly && !domain.hasPrefix(".") { domain = "." + domain }
+            let prefix = (c.httpOnly ?? false) ? "#HttpOnly_" : ""
+            let fields = [
+                prefix + clean(domain),
+                hostOnly ? "FALSE" : "TRUE",
+                clean(c.path ?? "/"),
+                (c.secure ?? false) ? "TRUE" : "FALSE",
+                String(Int64(c.expirationDate ?? 0)),
+                clean(c.name),
+                clean(c.value),
+            ]
+            text += fields.joined(separator: "\t") + "\n"
+        }
+        do {
+            try text.write(to: f, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: f.path)
+        } catch {
+            NSLog("ODM: could not save cookies: \(error)")
+        }
     }
 }
