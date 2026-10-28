@@ -174,14 +174,26 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 // Right-click menu: "Download with ODM"
+// Creating a menu item that already exists (e.g. the extension was reloaded twice quickly) is
+// harmless: in that case the existing item is just updated, and no error is reported.
+function ensureMenu(item) {
+  chrome.contextMenus.create(item, () => {
+    if (chrome.runtime.lastError) {
+      const { id, ...rest } = item;
+      chrome.contextMenus.update(id, rest, () => void chrome.runtime.lastError);
+    }
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
+    void chrome.runtime.lastError;
+    ensureMenu({
       id: "odm-link",
       title: "Download with ODM",
       contexts: ["link", "video", "audio", "image"],
     });
-    chrome.contextMenus.create({
+    ensureMenu({
       id: "odm-video",
       title: "Download video with ODM",
       contexts: ["page", "link", "video"],
