@@ -86,7 +86,7 @@ Every push to the `main` branch is built automatically by GitHub Actions and pub
 - **“Sign in to confirm you're not a bot”** or **HTTP 403** on a video: turn on **Settings → Video → Use my browser sign-in**, then send the video again with the ODM button on the page (the extension passes your sign-in to ODM)
 - **No ODM button on YouTube**: refresh the page (**⌘R**)
 - **Extension says ODM is not running**: open the ODM app
-- The first video download takes a minute longer while ODM prepares its video tools
+- **First launch:** ODM shows a setup screen while it downloads the parts it needs for video downloads (about 150 MB, once). If it stops, check your internet connection and press **Try Again**
 
 > Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission. Respect each site's terms of service.
 
@@ -178,7 +178,7 @@ ODM চালু হওয়ার সময় আর প্রতি ৬ ঘ�
 - ভিডিওতে **“Sign in to confirm you're not a bot”** বা **HTTP 403** এলে: **Settings → Video → Use my browser sign-in** চালু করুন, তারপর পেজের ODM বাটন দিয়ে ভিডিওটা আবার পাঠান (এক্সটেনশন আপনার লগইন ODM-কে দিয়ে দেয়)
 - **YouTube-এ ODM বাটন দেখা যাচ্ছে না**: পেজ রিফ্রেশ করুন (**⌘R**)
 - **এক্সটেনশন বলছে ODM চলছে না**: ODM অ্যাপটা খুলুন
-- প্রথম ভিডিও ডাউনলোডে এক মিনিট বেশি লাগে, কারণ ODM তখন ভিডিওর টুলগুলো প্রস্তুত করে
+- **প্রথমবার চালু করলে:** ভিডিও ডাউনলোডের জন্য দরকারি অংশগুলো (একবারই, প্রায় ১৫০ MB) নামানোর সময় ODM একটা সেটআপ স্ক্রিন দেখায়। মাঝপথে থেমে গেলে ইন্টারনেট সংযোগ দেখে **Try Again** চাপুন
 
 > যে ভিডিও ডাউনলোডের অধিকার আপনার আছে শুধু সেগুলোই নামান: নিজের আপলোড, Creative Commons, বা মালিকের অনুমতি নিয়ে। প্রতিটা সাইটের নিয়ম মেনে চলুন।
 

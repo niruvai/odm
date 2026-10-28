@@ -8,7 +8,7 @@ struct ODMApp: App {
 
     var body: some Scene {
         Window("ODM", id: "main") {
-            ContentView()
+            RootView()
                 .environmentObject(DownloadManager.shared)
                 .frame(minWidth: 860, minHeight: 480)
         }

@@ -1,5 +1,20 @@
 import Foundation
 
+/// One part of the first-run setup, shown on the setup screen.
+struct ToolStep: Identifiable, Equatable {
+    enum State: Equatable {
+        case waiting
+        case downloading(received: Int64, total: Int64)
+        case installing
+        case done
+        case failed(String)
+    }
+    let id: String
+    let title: String
+    let detail: String
+    var state: State
+}
+
 /// Manages the helper tools ODM uses for web video:
 ///  • yt-dlp  – the video downloader (https://github.com/yt-dlp/yt-dlp)
 ///  • Deno    – JavaScript runtime yt-dlp needs to solve YouTube's player challenges
@@ -13,6 +28,16 @@ final class YtDlp: ObservableObject {
     @Published private(set) var status: String?        // e.g. "Downloading ffmpeg…"
     @Published private(set) var lastError: String?
     @Published private(set) var toolsChanged = 0       // bumps after installs so Settings refreshes
+
+    // First-run setup screen
+    @Published private(set) var steps: [ToolStep] = [
+        ToolStep(id: "engine", title: "Video downloader", detail: "Downloads videos from websites", state: .waiting),
+        ToolStep(id: "youtube", title: "YouTube support", detail: "Needed to read YouTube videos", state: .waiting),
+        ToolStep(id: "joiner", title: "HD video & audio joiner", detail: "Joins HD video and sound into one MP4", state: .waiting),
+    ]
+    @Published private(set) var setupComplete = false
+    @Published private(set) var setupRunning = false
+    @Published private(set) var setupError: String?
 
     var isInstalling: Bool { status != nil }
 
@@ -41,6 +66,7 @@ final class YtDlp: ObservableObject {
     #endif
 
     private init() {
+        setupComplete = allToolsPresent
         // Folders left by an earlier update (kept until now in case a download was still using them).
         let fm = FileManager.default
         if let names = try? fm.contentsOfDirectory(atPath: binDir.path) {
@@ -89,6 +115,49 @@ final class YtDlp: ObservableObject {
             .joined(separator: ":")
     }
 
+    /// True when the video downloader, YouTube support and the HD joiner are all installed.
+    var allToolsPresent: Bool { binary != nil && denoPath != nil && ffmpegPath != nil }
+
+    /// First-run setup: installs every missing tool, reporting progress in `steps`.
+    /// The main window stays on the setup screen until this succeeds.
+    func runSetup() {
+        guard !setupRunning else { return }
+        if allToolsPresent {
+            setupComplete = true
+            return
+        }
+        setupRunning = true
+        setupError = nil
+        workQueue.async {
+            _ = self.prepareSync(forceUpdate: false)
+            let ok = self.allToolsPresent
+            DispatchQueue.main.async {
+                self.setStatus(nil)
+                self.setupRunning = false
+                self.toolsChanged += 1
+                if ok {
+                    self.setupComplete = true
+                } else {
+                    self.setupError = "Some parts could not be installed. Check your internet connection and try again."
+                }
+            }
+        }
+    }
+
+    private func updateStep(_ id: String, _ state: ToolStep.State) {
+        let apply = {
+            if let i = self.steps.firstIndex(where: { $0.id == id }), self.steps[i].state != state {
+                self.steps[i].state = state
+            }
+        }
+        if Thread.isMainThread { apply() } else { DispatchQueue.main.async(execute: apply) }
+    }
+
+    /// Progress callback for `fetch` that feeds a setup step.
+    private func progress(for id: String) -> (Int64, Int64) -> Void {
+        return { [weak self] got, total in self?.updateStep(id, .downloading(received: got, total: total)) }
+    }
+
     // MARK: Install / update
 
     /// Makes sure yt-dlp (required), Deno and ffmpeg (best effort) are present, then calls back on the
@@ -129,6 +198,7 @@ final class YtDlp: ObservableObject {
 
         if ytdlp == nil || refreshDue || migrate {
             setStatus("Preparing video tools…")
+            updateStep("engine", .downloading(received: 0, total: 0))
             var installed = false
             if !onedirRecentlyFailed || hasOnedir {
                 do {
@@ -144,11 +214,13 @@ final class YtDlp: ObservableObject {
             let singleNeeded = ytdlp == nil || (current == managedBinary && refreshDue)
             if !installed && singleNeeded {
                 do {
-                    let tmp = try fetch(ytdlpURL)
+                    let tmp = try fetch(ytdlpURL, progress: progress(for: "engine"))
+                    updateStep("engine", .installing)
                     try installExecutable(from: tmp, to: managedBinary)
                     ytdlp = managedBinary
                 } catch {
                     if ytdlp == nil {
+                        updateStep("engine", .failed("Could not download. Check your internet connection."))
                         return .failure(DMError.message("Could not prepare video downloads (\(error.localizedDescription)). Check your internet connection."))
                     }
                     // Keep using the older copy if the update failed.
@@ -156,23 +228,32 @@ final class YtDlp: ObservableObject {
             }
         }
         guard let ytdlpBinary = ytdlp else {
+            updateStep("engine", .failed("Could not install. Check your internet connection."))
             return .failure(DMError.message("Video downloads are not available right now."))
         }
+        updateStep("engine", .done)
 
         // 2. Deno (YouTube needs a JavaScript runtime)
         if denoPath == nil {
             setStatus("Preparing video tools…")
-            if let zip = try? fetch(denoURL), let file = try? unzipFind(zip, named: "deno") {
-                try? installExecutable(from: file, to: binDir.appendingPathComponent("deno"))
+            updateStep("youtube", .downloading(received: 0, total: 0))
+            if let zip = try? fetch(denoURL, progress: progress(for: "youtube")) {
+                updateStep("youtube", .installing)
+                if let file = try? unzipFind(zip, named: "deno") {
+                    try? installExecutable(from: file, to: binDir.appendingPathComponent("deno"))
+                }
             }
         }
+        updateStep("youtube", denoPath != nil ? .done : .failed("Could not download. Check your internet connection."))
 
         // 3. ffmpeg (needed for HD)
         if ffmpegPath == nil {
             setStatus("Preparing video tools…")
             let target = binDir.appendingPathComponent("ffmpeg")
             for url in ffmpegURLs {
-                guard let archive = try? fetch(url) else { continue }
+                updateStep("joiner", .downloading(received: 0, total: 0))
+                guard let archive = try? fetch(url, progress: progress(for: "joiner")) else { continue }
+                updateStep("joiner", .installing)
                 let file: URL?
                 if url.pathExtension == "gz" {
                     file = try? gunzip(archive)
@@ -185,13 +266,15 @@ final class YtDlp: ObservableObject {
                 try? fm.removeItem(at: target)   // didn't run on this Mac; try the next source
             }
         }
+        updateStep("joiner", ffmpegPath != nil ? .done : .failed("Could not download. Check your internet connection."))
         return .success(ytdlpBinary)
     }
 
     /// Downloads and checks the onedir yt-dlp, then swaps it in. Throws (and changes nothing) on any problem.
     private func installOnedir() throws {
         let fm = FileManager.default
-        let zip = try fetch(ytdlpOnedirURL)
+        let zip = try fetch(ytdlpOnedirURL, progress: progress(for: "engine"))
+        updateStep("engine", .installing)
         let work = fm.temporaryDirectory.appendingPathComponent("odm-ytdlp-" + UUID().uuidString, isDirectory: true)
         defer {
             try? fm.removeItem(at: zip)
@@ -211,7 +294,8 @@ final class YtDlp: ObservableObject {
         }
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: exe.path)
         _ = YtDlp.runQuick(URL(fileURLWithPath: "/usr/bin/xattr"), ["-cr", work.path])
-        guard YtDlp.runQuick(exe, ["--version"]) != nil else {
+        // First launch on a new Mac can be slow while macOS checks the files.
+        guard YtDlp.runQuick(exe, ["--version"], timeout: 180) != nil else {
             throw DMError.message("yt-dlp package does not run on this Mac")
         }
 
@@ -247,8 +331,11 @@ final class YtDlp: ObservableObject {
     }
 
     /// Blocking download (only called on workQueue). Returns a temp file we own.
-    private func fetch(_ url: URL) throws -> URL {
-        final class Box { var result: Result<URL, Error> = .failure(DMError.message("Download did not start")) }
+    private func fetch(_ url: URL, progress: ((Int64, Int64) -> Void)? = nil) throws -> URL {
+        final class Box {
+            var result: Result<URL, Error> = .failure(DMError.message("Download did not start"))
+            var lastReport = Date.distantPast
+        }
         let sem = DispatchSemaphore(value: 0)
         let box = Box()
         let task = URLSession.shared.downloadTask(with: url) { tmp, response, error in
@@ -268,8 +355,23 @@ final class YtDlp: ObservableObject {
             }
             sem.signal()
         }
+        // Report progress a few times a second (the setup screen shows it).
+        var observation: NSKeyValueObservation?
+        if let progress = progress {
+            observation = task.progress.observe(\.fractionCompleted) { p, _ in
+                let now = Date()
+                guard now.timeIntervalSince(box.lastReport) > 0.2 else { return }
+                box.lastReport = now
+                progress(p.completedUnitCount, p.totalUnitCount)
+            }
+        }
         task.resume()
         sem.wait()
+        observation?.invalidate()
+        if let progress = progress, case .success = box.result {
+            let total = max(task.countOfBytesExpectedToReceive, task.countOfBytesReceived)
+            progress(task.countOfBytesReceived, total)
+        }
         return try box.result.get()
     }
 
@@ -326,16 +428,28 @@ final class YtDlp: ObservableObject {
     }
 
     /// Runs a short command and returns its trimmed stdout (nil if it fails).
-    static func runQuick(_ exe: URL, _ args: [String]) -> String? {
+    /// Gives up (and stops the program) after `timeout` seconds, so a stuck tool can't hang ODM.
+    static func runQuick(_ exe: URL, _ args: [String], timeout: TimeInterval = 60) -> String? {
+        final class Box { var data = Data() }
         let p = Process()
         p.executableURL = exe
         p.arguments = args
         let pipe = Pipe()
         p.standardOutput = pipe
-        p.standardError = Pipe()
+        p.standardError = FileHandle.nullDevice
         do { try p.run() } catch { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let box = Box()
+        let finished = DispatchSemaphore(value: 0)
+        DispatchQueue.global().async {
+            box.data = pipe.fileHandleForReading.readDataToEndOfFile()
+            finished.signal()
+        }
+        if finished.wait(timeout: .now() + timeout) == .timedOut {
+            p.terminate()
+            return nil
+        }
         p.waitUntilExit()
+        let data = box.data
         guard p.terminationStatus == 0 else { return nil }
         let s = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
         return s ?? ""
