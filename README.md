@@ -1,235 +1,187 @@
-# ODM — Open Source Download Manager for macOS
+<div align="center">
 
-**[English](#english) · [বাংলা](#bangla)**
+<img src="Resources/AppIcon.png" alt="ODM app icon" width="128" height="128">
 
-**ODM** is a free, open-source download manager for macOS, in the spirit of Internet Download Manager (IDM) for Windows.
-**ODM** হলো macOS-এর জন্য একটা ফ্রি, ওপেন-সোর্স ডাউনলোড ম্যানেজার, Windows-এর IDM-এর মতো।
+# ODM
 
-Made by **[Nirob Islam](https://www.nirobislam.com/en/)**
+**Open Source Download Manager for macOS**
+
+Fast multi-connection downloads, a Chrome extension and one-click video downloads — free and open source.
+
+[![Latest release](https://img.shields.io/github/v/release/niruvai/odm?label=release&color=2f6bff)](https://github.com/niruvai/odm/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/niruvai/odm/total?color=2f6bff)](https://github.com/niruvai/odm/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/niruvai/odm/release.yml?branch=main&label=build)](https://github.com/niruvai/odm/actions/workflows/release.yml)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple)](#requirements)
+[![License: MIT](https://img.shields.io/github/license/niruvai/odm?color=blue)](LICENSE)
+
+[**Download**](https://github.com/niruvai/odm/releases/latest) ·
+[Features](#features) ·
+[Install](#installation) ·
+[Usage](#usage) ·
+[FAQ](#troubleshooting) ·
+[বাংলায় পড়ুন](README.bn.md)
+
+</div>
 
 ---
 
-## English
+## Why ODM?
 
-### Features
+Windows users have IDM. On macOS, browsers download each file over a single connection, and a dropped network often means starting over. **ODM** splits every file into parts, downloads them in parallel, and picks up exactly where it stopped — with a native SwiftUI interface that feels at home on the Mac.
 
-- **Multi-connection downloads**: each file downloads over 8 parallel connections (adjustable from 1 to 32)
-- **Dynamic segmentation** (IDM's core trick): when a connection finishes early, it takes over half of the largest remaining part, so every connection stays busy until the end
-- **Pause / Resume**: continues where it stopped, even after a network drop or an app restart
-- **Automatic retries**: a dropped connection retries each part up to 8 times
-- **Download queue**: choose how many downloads run at the same time (default 3)
-- **Category folders**: Video, Music, Compressed, Programs, Documents, Images
-- **Chrome / Edge / Brave extension**: browser downloads go to ODM automatically, with cookies and referrer, so sites that need a login still work
-- **Video downloads**: a **⬇ ODM** button under YouTube videos and a **Download** button on the player, with a quality menu (Best, 1080p, 720p, 480p, 360p, audio only); a **Download video** button in the extension popup for other sites (Facebook, Vimeo and more)
-- **Automatic updates**: when a new version is out, ODM shows **Update Now** inside the app
-- Menu-bar icon, active-download count on the Dock icon, and your Mac doesn't sleep while downloading
-- Drag a link onto the window to start a download
+## Features
 
-### Requirements
+| | Feature | Details |
+|---|---|---|
+| ⚡ | **Multi-connection downloads** | 8 parallel connections per file by default (adjustable 1–32) |
+| 🧩 | **Dynamic segmentation** | When a connection finishes early it takes over half of the largest remaining part, so speed holds to the end |
+| ⏯️ | **Pause & resume** | Continues after network drops and app restarts; failed parts retry automatically |
+| 🪟 | **Progress window** | IDM-style window per download: speed, time left and the progress of every connection |
+| 🌐 | **Browser integration** | Chrome, Edge and Brave downloads go to ODM automatically, with cookies and referrer |
+| 🎬 | **Video downloads** | ODM button on video pages, with a quality menu up to 1080p or audio only |
+| 🗂️ | **Smart folders** | Sorted into Video, Music, Compressed, Programs, Documents and Images |
+| 🔄 | **Automatic updates** | New versions install from inside the app in one click |
+| 💤 | **Mac-friendly** | Menu-bar icon, Dock badge, and your Mac stays awake while downloading |
 
-- macOS 13 (Ventura) or newer
-- Apple Silicon or Intel Mac
+## Requirements
 
-### Install
+- macOS 13 Ventura or later
+- Apple Silicon or Intel Mac (universal app)
+- About 150 MB of free space for the video download components, installed once on first launch
 
-1. Download **ODM.zip** from the [latest release](https://github.com/niruvai/odm/releases/latest)
-2. Unzip it and drag **ODM.app** into your **Applications** folder
-3. Open ODM. The first time, macOS may say it can't verify the developer:
-   - Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**, or
-   - Run this once in Terminal: `xattr -dr com.apple.quarantine /Applications/ODM.app`
+## Installation
 
-#### Or build from source
+1. Download **[ODM.zip](https://github.com/niruvai/odm/releases/latest)** from the latest release.
+2. Unzip it and move **ODM.app** to your **Applications** folder.
+3. Open ODM. Because ODM is not notarized by Apple, macOS may block the first launch: open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 
-You need Apple's Command Line Tools (`xcode-select --install`); full Xcode is not required.
+On first launch, ODM shows a **setup screen** while it installs the components needed for video downloads, with the progress of each one. When it finishes, a **step-by-step guide** helps you connect the Chrome extension.
 
-```bash
-git clone https://github.com/niruvai/odm.git
-cd odm
-./build.sh --install
-```
+### Chrome extension
 
-This builds ODM and installs it to `/Applications/ODM.app`. Building from a folder on an external drive (exFAT) also works.
+The guide walks you through it, and you can reopen it any time from **Settings → Browser → Open Setup Guide…**
 
-### Install the Chrome extension
+1. Open `chrome://extensions` in Chrome (Edge and Brave work the same way).
+2. Turn on **Developer mode** in the top-right corner.
+3. Click **Load unpacked** and choose `~/Library/Application Support/ODM/ChromeExtension` — or drag that folder onto the extensions page.
 
-After the first-launch setup, ODM shows a step-by-step guide for this (you can reopen it from **Settings → Browser → Open Setup Guide…**). The steps:
+The guide turns green when the extension is connected. After an ODM update, click **↻ Reload** on the ODM extension in `chrome://extensions`.
 
-1. Open ODM → **Settings (⌘,) → Browser → Show Extension Folder**
-2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top right)
-3. Click **Load unpacked**, press **⌘⇧G** and enter: `~/Library/Application Support/ODM/ChromeExtension`
+> **Tip:** In Chrome's **Settings → Downloads**, turn off *“Ask where to save each file before downloading”*.
 
-After ODM updates, click the **↻ Reload** button for ODM in `chrome://extensions`.
-
-Tip: in Chrome **Settings → Downloads**, turn off **“Ask where to save each file before downloading”**.
-
-### How to use
+## Usage
 
 | Task | How |
 |---|---|
-| New download | **⌘N**: a copied link is filled in automatically; paste several links, one per line |
-| From Chrome | Download as usual; ODM takes over automatically |
-| YouTube video | Click **⬇ ODM** under the video (or **Download** on the player) and pick a quality |
-| Other video sites | Click the ODM extension icon → **Download video**, or right-click the page → **Download video with ODM** |
-| Pause / Resume | Toolbar buttons or right-click |
-| Pause all / Resume all | **⇧⌘P** / **⇧⌘R** |
-| Open a file | Double-click it in the list |
+| Add a download | Press **⌘N** — a copied link is filled in automatically; paste several links, one per line |
+| Download from Chrome | Download as usual; ODM takes over |
+| Download a video | Click **ODM** under the video, or **Download** on the player, and pick a quality |
+| Other video sites | ODM extension icon → **Download video**, or right-click the page → **Download video with ODM** |
+| Pause / resume | Toolbar buttons, right-click, or the progress window |
+| Pause all / resume all | **⇧⌘P** / **⇧⌘R** |
+| Open a finished file | Double-click it, or **Open Folder** in its progress window |
 | Settings | **⌘,** |
 
-Files are saved to `~/Downloads/ODM/<category>/`.
+Files are saved to `~/Downloads/ODM/<category>/`. The download folder, number of connections, parallel downloads and default video quality can be changed in Settings.
 
-### Updates
+> **Please download responsibly.** Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission — and respect each site's terms of service.
 
-ODM checks for a new version when it starts and every 6 hours. When one is available, a blue banner appears at the top of the window: click **Update Now**. ODM downloads the new version, replaces itself and restarts, and unfinished downloads continue where they left off. To check yourself: menu **ODM → Check for Updates…**
+## Updates
 
-Every push to the `main` branch is built automatically by GitHub Actions and published as a release (`build-<number>`); that is where updates come from.
+ODM checks for a new version at launch and every 6 hours. When one is available, a banner appears at the top of the window — click **Update Now** and ODM installs it and restarts; unfinished downloads continue where they left off. You can also check manually from **ODM → Check for Updates…**
 
-### Troubleshooting
+## Troubleshooting
 
-- **“Sign in to confirm you're not a bot”** or **HTTP 403** on a video: turn on **Settings → Video → Use my browser sign-in**, then send the video again with the ODM button on the page (the extension passes your sign-in to ODM)
-- **No ODM button on YouTube**: refresh the page (**⌘R**)
-- **Extension says ODM is not running**: open the ODM app
-- **First launch:** ODM shows a setup screen while it downloads the parts it needs for video downloads (about 150 MB, once). If it stops, check your internet connection and press **Try Again**
+<details>
+<summary><b>The setup screen stops or shows an error</b></summary>
 
-> Only download videos you have the right to save — your own uploads, Creative Commons content, or with the owner's permission. Respect each site's terms of service.
+Check your internet connection and click **Try Again**. The components are downloaded from GitHub and the FFmpeg build server; a firewall or VPN that blocks them will stop the setup.
+</details>
 
-### Limitations
+<details>
+<summary><b>A video says “Sign in to confirm you're not a bot” or “HTTP 403”</b></summary>
 
-- If a server doesn't support byte ranges, the file downloads over one connection and can't be resumed
-- Some downloads that start from a POST form can't be handed to ODM
-- Private or members-only videos can't be downloaded
-- ODM is not notarized by Apple, so macOS asks for confirmation the first time you open it
+Turn on **Settings → Video → Use my browser sign-in**, then send the video again with the ODM button on the page. The extension passes your sign-in to ODM.
+</details>
 
----
+<details>
+<summary><b>There is no ODM button on YouTube</b></summary>
 
-<a id="bangla"></a>
+Refresh the page (**⌘R**). If it still doesn't appear, check that the extension is enabled in `chrome://extensions`.
+</details>
 
-## বাংলা
+<details>
+<summary><b>The extension says “ODM app is not running”</b></summary>
 
-### কী কী আছে
+Open ODM. It keeps running in the menu bar when you close its window.
+</details>
 
-- **মাল্টি-কানেকশন ডাউনলোড**: প্রতিটা ফাইল একসাথে ৮টা আলাদা কানেকশনে নামে (১ থেকে ৩২ পর্যন্ত বদলানো যায়)
-- **ডাইনামিক সেগমেন্টেশন** (IDM-এর আসল কৌশল): কোনো কানেকশন আগে শেষ হলে সে সবচেয়ে বড় বাকি অংশের অর্ধেক নিজে নিয়ে নেয়, তাই শেষ পর্যন্ত সব কানেকশন কাজে থাকে
-- **Pause / Resume**: নেট কেটে গেলে বা অ্যাপ বন্ধ করলেও যেখানে থেমেছিল সেখান থেকে আবার শুরু হয়
-- **নিজে থেকে আবার চেষ্টা**: কানেকশন ড্রপ হলে প্রতিটা অংশ ৮ বার পর্যন্ত আবার চেষ্টা করে
-- **ডাউনলোড কিউ**: একসাথে কয়টা ডাউনলোড চলবে ঠিক করা যায় (ডিফল্ট ৩)
-- **ধরন অনুযায়ী ফোল্ডার**: Video, Music, Compressed, Programs, Documents, Images
-- **Chrome / Edge / Brave এক্সটেনশন**: ব্রাউজারের ডাউনলোড নিজে থেকেই ODM-এ চলে যায়, কুকি আর রেফারার সহ, তাই লগইন লাগে এমন সাইটেও কাজ করে
-- **ভিডিও ডাউনলোড**: YouTube ভিডিওর নিচে **⬇ ODM** বাটন আর প্লেয়ারের উপর **Download** বাটন, কোয়ালিটি মেনু সহ (Best, 1080p, 720p, 480p, 360p, শুধু অডিও); অন্য সাইটের (Facebook, Vimeo ইত্যাদি) জন্য এক্সটেনশনের পপআপে **Download video** বাটন
-- **অটো-আপডেট**: নতুন ভার্সন এলে অ্যাপের ভেতরেই **Update Now** দেখায়
-- মেনু বারে আইকন, Dock-এ চলমান ডাউনলোডের সংখ্যা, আর ডাউনলোডের সময় ম্যাক ঘুমিয়ে পড়ে না
-- উইন্ডোতে লিংক টেনে এনে ছাড়লেই ডাউনলোড শুরু হয়
+<details>
+<summary><b>Known limitations</b></summary>
 
-### যা লাগবে
+- Servers that don't support byte ranges download over one connection and can't be resumed.
+- Some downloads started from a POST form can't be handed to ODM.
+- Private and members-only videos can't be downloaded.
+- ODM runs on macOS only.
+</details>
 
-- macOS 13 (Ventura) বা নতুন
-- Apple Silicon বা Intel ম্যাক
+## Privacy
 
-### ইনস্টল
+ODM has no accounts, analytics or tracking. The browser extension talks only to the ODM app on your own Mac (`127.0.0.1`). Website sign-in cookies used for video downloads are stored locally in a private file that only your user account can read. ODM connects to the internet only to download your files, to install and update its video components, and to check GitHub for app updates.
 
-1. [সর্বশেষ রিলিজ](https://github.com/niruvai/odm/releases/latest) থেকে **ODM.zip** নামান
-2. জিপ খুলে **ODM.app** টেনে **Applications** ফোল্ডারে রাখুন
-3. ODM খুলুন। প্রথমবার macOS বলতে পারে ডেভেলপার যাচাই করা যায়নি। তখন:
-   - **System Settings → Privacy & Security**-এ গিয়ে নিচে **Open Anyway** চাপুন, অথবা
-   - Terminal-এ একবার চালান: `xattr -dr com.apple.quarantine /Applications/ODM.app`
+## Building from source
 
-#### অথবা সোর্স থেকে বিল্ড করুন
-
-Apple-এর Command Line Tools লাগবে (`xcode-select --install`), পুরো Xcode লাগবে না।
+Requires Apple's Command Line Tools (`xcode-select --install`); full Xcode is not needed.
 
 ```bash
 git clone https://github.com/niruvai/odm.git
 cd odm
-./build.sh --install
+./build.sh --install    # builds ODM.app and installs it to /Applications
 ```
 
-এটা ODM বিল্ড করে `/Applications/ODM.app`-এ ইনস্টল করে দেয়। এক্সটার্নাল ড্রাইভে (exFAT) রাখা ফোল্ডার থেকেও বিল্ড করা যায়।
+Every push to `main` is built by [GitHub Actions](.github/workflows/release.yml) as a universal app and published as a release; the in-app updater installs releases from there.
 
-### Chrome এক্সটেনশন বসানো
-
-প্রথমবারের সেটআপ শেষ হলে ODM নিজেই ধাপে ধাপে একটা গাইড দেখায় (পরে **Settings → Browser → Open Setup Guide…** থেকেও খোলা যায়)। ধাপগুলো:
-
-1. ODM খুলে **Settings (⌘,) → Browser → Show Extension Folder** চাপুন
-2. Chrome-এ `chrome://extensions` খুলুন, ডানদিকে উপরে **Developer mode** চালু করুন
-3. **Load unpacked** চাপুন, **⌘⇧G** দিয়ে এই পাথ দিন: `~/Library/Application Support/ODM/ChromeExtension`
-
-ODM আপডেট হওয়ার পর `chrome://extensions`-এ ODM-এর **↻ Reload** বাটন চাপুন।
-
-টিপ: Chrome-এর **Settings → Downloads**-এ **“Ask where to save each file before downloading”** বন্ধ রাখুন।
-
-### ব্যবহার
-
-| কাজ | কীভাবে |
-|---|---|
-| নতুন ডাউনলোড | **⌘N**: কপি করা লিংক নিজে বসে যায়; একসাথে অনেক লিংক দিতে চাইলে এক লাইনে একটা করে |
-| Chrome থেকে | স্বাভাবিকভাবে ডাউনলোড করুন, ODM নিজেই ধরে নেবে |
-| YouTube ভিডিও | ভিডিওর নিচে **⬇ ODM** (অথবা প্লেয়ারের উপর **Download**) চেপে কোয়ালিটি বেছে নিন |
-| অন্য ভিডিও সাইট | এক্সটেনশনের আইকন → **Download video**, অথবা পেজে রাইট-ক্লিক → **Download video with ODM** |
-| থামানো / চালু | টুলবারের বাটন অথবা রাইট-ক্লিক |
-| সব থামানো / সব চালু | **⇧⌘P** / **⇧⌘R** |
-| ফাইল খোলা | তালিকায় ডাবল-ক্লিক |
-| সেটিংস | **⌘,** |
-
-ফাইল সেভ হয় `~/Downloads/ODM/<ধরন>/`-এ।
-
-### আপডেট
-
-ODM চালু হওয়ার সময় আর প্রতি ৬ ঘণ্টায় নতুন ভার্সন খোঁজে। নতুন ভার্সন পেলে উইন্ডোর উপরে নীল ব্যানার আসে, সেখানে **Update Now** চাপুন। ODM নতুন ভার্সন নামিয়ে নিজেকে বদলে আবার চালু হয়, আর চলমান ডাউনলোড যেখানে ছিল সেখান থেকে চলতে থাকে। নিজে চেক করতে চাইলে: মেনু **ODM → Check for Updates…**
-
-`main` ব্রাঞ্চে প্রতিটা পুশের পর GitHub Actions নিজে অ্যাপ বিল্ড করে একটা রিলিজ (`build-<নম্বর>`) বানায়। আপডেট সেখান থেকেই আসে।
-
-### সমস্যা হলে
-
-- ভিডিওতে **“Sign in to confirm you're not a bot”** বা **HTTP 403** এলে: **Settings → Video → Use my browser sign-in** চালু করুন, তারপর পেজের ODM বাটন দিয়ে ভিডিওটা আবার পাঠান (এক্সটেনশন আপনার লগইন ODM-কে দিয়ে দেয়)
-- **YouTube-এ ODM বাটন দেখা যাচ্ছে না**: পেজ রিফ্রেশ করুন (**⌘R**)
-- **এক্সটেনশন বলছে ODM চলছে না**: ODM অ্যাপটা খুলুন
-- **প্রথমবার চালু করলে:** ভিডিও ডাউনলোডের জন্য দরকারি অংশগুলো (একবারই, প্রায় ১৫০ MB) নামানোর সময় ODM একটা সেটআপ স্ক্রিন দেখায়। মাঝপথে থেমে গেলে ইন্টারনেট সংযোগ দেখে **Try Again** চাপুন
-
-> যে ভিডিও ডাউনলোডের অধিকার আপনার আছে শুধু সেগুলোই নামান: নিজের আপলোড, Creative Commons, বা মালিকের অনুমতি নিয়ে। প্রতিটা সাইটের নিয়ম মেনে চলুন।
-
-### সীমাবদ্ধতা
-
-- যে সার্ভার byte range সমর্থন করে না, সেখানে একটাই কানেকশন চলে আর Resume হয় না
-- POST ফর্ম দিয়ে শুরু হওয়া কিছু ডাউনলোড ODM-এ পাঠানো যায় না
-- প্রাইভেট বা মেম্বারশিপ ভিডিও নামানো যায় না
-- ODM Apple-এর notarization করা নয়, তাই প্রথমবার খোলার সময় macOS নিশ্চিত হতে চায়
-
----
-
-## Project layout / প্রজেক্টের গঠন
+<details>
+<summary><b>Project structure</b></summary>
 
 ```
 Sources/ODM/
-  DownloadEngine.swift   multi-connection engine, dynamic segmentation, retries
-  Prober.swift           size, file name and range support detection
-  YtDlp.swift            video tools setup (yt-dlp, Deno, ffmpeg) and the video download runner
-  DownloadManager.swift  list, queue, persistence, notifications
-  Updater.swift          in-app updates from GitHub Releases
-  LocalServer.swift      127.0.0.1:9614 bridge for the browser extension
-  ContentView.swift      main window
-  OtherViews.swift       add dialog, detail panel, settings, menu bar
-  Author.swift           About window and credits
-  UIState.swift          window/dialog state (no @State, so it builds without Xcode)
-ChromeExtension/         browser extension (Manifest V3)
-build.sh                 builds, signs and installs ODM.app
-.github/workflows/       builds and publishes a release on every push
+  ODMApp.swift            app entry, menus, local bridge startup
+  DownloadEngine.swift    multi-connection engine, dynamic segmentation, retries
+  Prober.swift            file size, name and range-support detection
+  DownloadManager.swift   download list, queue, persistence, notifications
+  YtDlp.swift             video components setup and the video download runner
+  VideoPrefetch.swift     fetches video info early so downloads start faster
+  ProgressWindow.swift    per-download progress window
+  SetupView.swift         first-launch setup screen
+  ChromeGuide.swift       Chrome extension setup guide
+  Updater.swift           in-app updates from GitHub Releases
+  LocalServer.swift       127.0.0.1:9614 bridge for the browser extension
+  ContentView.swift       main window
+  OtherViews.swift        add dialog, detail panel, settings, menu bar
+  Author.swift            About window and credits
+  Models.swift            data model
+  Support.swift           preferences and helpers
+  UIState.swift           window state (no @State, so it builds without Xcode)
+ChromeExtension/          browser extension (Manifest V3)
+build.sh                  builds, signs and installs ODM.app
 ```
+</details>
 
-Video downloads use [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Deno](https://deno.com) and [FFmpeg](https://ffmpeg.org), which ODM downloads on first use. Each has its own license.
-ভিডিও ডাউনলোডে [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Deno](https://deno.com) আর [FFmpeg](https://ffmpeg.org) ব্যবহার হয়, ODM প্রথমবার এগুলো নিজে নামিয়ে নেয়। প্রত্যেকটার নিজস্ব লাইসেন্স আছে।
+## Contributing
 
-## Author / নির্মাতা
+Bug reports and ideas are welcome in [Issues](https://github.com/niruvai/odm/issues). For security problems, please follow the [security policy](SECURITY.md) instead of opening a public issue.
 
-**ODM is made by Nirob Islam.**
-**ODM তৈরি করেছেন নিরব ইসলাম।**
+## Acknowledgements
 
-- Website: https://www.nirobislam.com/en/
-- Facebook: https://www.facebook.com/mdnurunnabiislamniroob
-- Instagram: https://www.instagram.com/niru_bhai_0/
+Video downloads are powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense), [Deno](https://deno.com) (MIT) and [FFmpeg](https://ffmpeg.org) (LGPL/GPL). ODM downloads them separately on first launch; each keeps its own license.
 
-If you share, fork or build on ODM, please keep the author's name and the license notice.
-ODM শেয়ার, fork বা এর উপর ভিত্তি করে কিছু বানালে নির্মাতার নাম আর লাইসেন্সের লেখা রেখে দিন।
+## Author
 
-## License / লাইসেন্স
+**ODM is made by [Nirob Islam](https://www.nirobislam.com/en/).**
 
-MIT — © 2026 Nirob Islam, see [LICENSE](LICENSE). The copyright notice and author credit must be kept in copies and modified versions.
-MIT লাইসেন্স — © ২০২৬ নিরব ইসলাম, বিস্তারিত [LICENSE](LICENSE)-এ। কপি বা পরিবর্তিত সংস্করণে copyright notice আর নির্মাতার নাম রাখা বাধ্যতামূলক।
+[Website](https://www.nirobislam.com/en/) · [Facebook](https://www.facebook.com/mdnurunnabiislamniroob) · [Instagram](https://www.instagram.com/niru_bhai_0/)
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Nirob Islam. If you share, fork or build on ODM, keep the copyright notice and author credit.
