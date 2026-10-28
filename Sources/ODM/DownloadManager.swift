@@ -16,6 +16,7 @@ final class DownloadManager: ObservableObject {
 
     private init() {
         Prefs.registerDefaults()
+        syncChromeExtension()
         load()
         if Bundle.main.bundleIdentifier != nil {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
@@ -523,8 +524,17 @@ final class DownloadManager: ObservableObject {
     func syncChromeExtension() {
         let fm = FileManager.default
         let dest = FileUtil.appSupportDir.appendingPathComponent("ChromeExtension")
+        // People who already set up the extension (the folder exists) don't need the setup guide.
+        if UserDefaults.standard.object(forKey: Prefs.chromeGuideDoneKey) == nil {
+            UserDefaults.standard.set(fm.fileExists(atPath: dest.path), forKey: Prefs.chromeGuideDoneKey)
+        }
         guard let src = Bundle.main.resourceURL?.appendingPathComponent("ChromeExtension"),
-              fm.fileExists(atPath: src.path), fm.fileExists(atPath: dest.path) else { return }
+              fm.fileExists(atPath: src.path) else { return }
+        // First launch: create the folder Chrome loads the extension from.
+        if !fm.fileExists(atPath: dest.path) {
+            try? fm.copyItem(at: src, to: dest)
+            return
+        }
         func version(_ dir: URL) -> String? {
             guard let data = try? Data(contentsOf: dir.appendingPathComponent("manifest.json")),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }

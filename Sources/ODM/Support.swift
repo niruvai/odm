@@ -11,6 +11,7 @@ enum Prefs {
     static let categorizeKey = "sortIntoCategoryFolders"
     static let notifyKey = "notifyOnComplete"
     static let showProgressWindowKey = "showProgressWindow"
+    static let chromeGuideDoneKey = "chromeGuideDone"
     static let videoQualityKey = "defaultVideoQuality"
     static let browserCookiesKey = "videoUseChromeCookies"
 

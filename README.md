@@ -52,6 +52,8 @@ This builds ODM and installs it to `/Applications/ODM.app`. Building from a fold
 
 ### Install the Chrome extension
 
+After the first-launch setup, ODM shows a step-by-step guide for this (you can reopen it from **Settings → Browser → Open Setup Guide…**). The steps:
+
 1. Open ODM → **Settings (⌘,) → Browser → Show Extension Folder**
 2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top right)
 3. Click **Load unpacked**, press **⌘⇧G** and enter: `~/Library/Application Support/ODM/ChromeExtension`
@@ -143,6 +145,8 @@ cd odm
 এটা ODM বিল্ড করে `/Applications/ODM.app`-এ ইনস্টল করে দেয়। এক্সটার্নাল ড্রাইভে (exFAT) রাখা ফোল্ডার থেকেও বিল্ড করা যায়।
 
 ### Chrome এক্সটেনশন বসানো
+
+প্রথমবারের সেটআপ শেষ হলে ODM নিজেই ধাপে ধাপে একটা গাইড দেখায় (পরে **Settings → Browser → Open Setup Guide…** থেকেও খোলা যায়)। ধাপগুলো:
 
 1. ODM খুলে **Settings (⌘,) → Browser → Show Extension Folder** চাপুন
 2. Chrome-এ `chrome://extensions` খুলুন, ডানদিকে উপরে **Developer mode** চালু করুন

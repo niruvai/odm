@@ -49,6 +49,18 @@ async function sendToApp(url, filename, referrer) {
   }
 }
 
+// Tell ODM the extension is installed and running (shown as "Chrome extension connected").
+// Harmless when ODM is closed.
+function sayHello() {
+  fetch(API + "/hello", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ version: chrome.runtime.getManifest().version }),
+  }).catch(() => {});
+}
+sayHello();
+chrome.runtime.onStartup.addListener(sayHello);
+
 function baseName(path) {
   if (!path) return "";
   const parts = path.split(/[\\/]/);

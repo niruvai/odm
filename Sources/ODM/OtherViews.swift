@@ -253,6 +253,7 @@ struct SegmentBar: View {
 
 struct SettingsView: View {
     @EnvironmentObject var manager: DownloadManager
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(Prefs.connectionsKey) private var connections = 8
     @AppStorage(Prefs.concurrentKey) private var maxConcurrent = 3
     @AppStorage(Prefs.folderKey) private var folder = Prefs.defaultFolder
@@ -298,10 +299,15 @@ struct SettingsView: View {
                 """)
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
-                Button("Show Extension Folder") { manager.revealChromeExtension() }
-                Text("Bridge listening on 127.0.0.1:\(String(LocalServer.port))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 10) {
+                    Button("Open Setup Guide…") {
+                        UserDefaults.standard.set(false, forKey: Prefs.chromeGuideDoneKey)
+                        openWindow(id: "main")
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+                    Button("Show Extension Folder") { manager.revealChromeExtension() }
+                }
+                ExtensionStatusLine()
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -321,6 +327,23 @@ struct SettingsView: View {
         panel.prompt = "Choose"
         if panel.runModal() == .OK, let url = panel.url {
             folder = url.path
+        }
+    }
+}
+
+/// "Chrome extension connected" / "not connected yet" line for Settings → Browser.
+struct ExtensionStatusLine: View {
+    @ObservedObject private var status = ExtensionStatus.shared
+
+    var body: some View {
+        if status.lastSeen != nil {
+            Label("Chrome extension connected\(status.version.map { " (\($0))" } ?? "")", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else {
+            Label("Extension not connected yet — open Chrome, or use the setup guide", systemImage: "circle.dashed")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

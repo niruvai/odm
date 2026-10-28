@@ -112,9 +112,20 @@ final class LocalServer {
         }
         let path = req.path.split(separator: "?").first.map(String.init) ?? req.path
 
+        if fromExtension && req.method != "OPTIONS" {
+            var version: String?
+            if path == "/hello",
+               let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any] {
+                version = json["version"] as? String
+            }
+            DispatchQueue.main.async { ExtensionStatus.shared.seen(version: version) }
+        }
+
         switch (req.method, path) {
         case ("OPTIONS", _):
             send(conn, status: "204 No Content", body: "", origin: origin)
+        case ("POST", "/hello"):
+            send(conn, status: "200 OK", body: #"{"ok":true,"app":"ODM"}"#, origin: origin)
         case ("GET", "/ping"):
             send(conn, status: "200 OK", body: #"{"ok":true,"app":"ODM"}"#, origin: origin)
         case ("POST", "/add"):

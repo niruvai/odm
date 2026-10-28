@@ -5,12 +5,15 @@ import AppKit
 /// then the download list.
 struct RootView: View {
     @ObservedObject private var tools = YtDlp.shared
+    @AppStorage(Prefs.chromeGuideDoneKey) private var guideDone = false
 
     var body: some View {
-        if tools.setupComplete {
-            ContentView()
-        } else {
+        if !tools.setupComplete {
             SetupView()
+        } else if !guideDone {
+            ChromeGuideView { guideDone = true }
+        } else {
+            ContentView()
         }
     }
 }
