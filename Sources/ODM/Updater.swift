@@ -239,7 +239,7 @@ struct UpdateBanner: View {
                         .foregroundStyle(.white)
                         .popover(isPresented: $updater.showNotes) {
                             ScrollView {
-                                Text(release.notes)
+                                Text(LocalizedStringKey(release.notes))
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
@@ -270,6 +270,12 @@ struct UpdateBanner: View {
         case .failed(let msg):
             HStack(spacing: 8) {
                 Text(msg).font(.caption).foregroundStyle(.white).lineLimit(2)
+                Button("Download") {
+                    if let url = URL(string: "https://github.com/niruvai/odm/releases/latest") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .help("Download the latest ODM.dmg and install it by hand.")
                 Button("Retry") { updater.install() }
             }
         default:
