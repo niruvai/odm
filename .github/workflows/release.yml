@@ -32,6 +32,17 @@ jobs:
           ditto -c -k --keepParent build/ODM.app build/ODM.zip
           echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
 
+      # ODM.dmg is for people downloading by hand: open it and drag ODM onto Applications.
+      # ODM.zip stays for the in-app updater. If the styled DMG fails, fall back to a plain one.
+      - name: Make ODM.dmg
+        run: |
+          if ! npx --yes appdmg@0.6.6 Resources/dmg/appdmg.json build/ODM.dmg; then
+            echo "Styled DMG failed; building a plain one."
+            rm -f build/ODM.dmg
+            mkdir -p build/dmg && cp -R build/ODM.app build/dmg/ && ln -s /Applications build/dmg/Applications
+            hdiutil create -volname ODM -srcfolder build/dmg -ov -format UDZO build/ODM.dmg
+          fi
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,7 +52,7 @@ jobs:
             exit 0
           fi
           git log -1 --pretty=%B > notes.txt
-          gh release create "build-$BUILD" build/ODM.zip \
+          gh release create "build-$BUILD" build/ODM.dmg build/ODM.zip \
             --title "ODM build $BUILD" \
             --notes-file notes.txt \
             --latest

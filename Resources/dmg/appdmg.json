@@ -1,0 +1,10 @@
+{
+  "title": "ODM",
+  "icon-size": 112,
+  "background": "background.png",
+  "window": { "size": { "width": 660, "height": 400 } },
+  "contents": [
+    { "x": 165, "y": 215, "type": "file", "path": "../../build/ODM.app" },
+    { "x": 495, "y": 215, "type": "link", "path": "/Applications" }
+  ]
+}

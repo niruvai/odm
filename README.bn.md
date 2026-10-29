@@ -50,8 +50,8 @@ Windows-এ সবার জন্য আছে IDM। macOS-এ ব্রাউ
 
 ## ইনস্টল
 
-1. সর্বশেষ রিলিজ থেকে **[ODM.zip](https://github.com/niruvai/odm/releases/latest)** নামান।
-2. জিপ খুলে **ODM.app** টেনে **Applications** ফোল্ডারে রাখুন।
+1. সর্বশেষ রিলিজ থেকে **[ODM.dmg](https://github.com/niruvai/odm/releases/latest)** নামান।
+2. ফাইলটা খুলুন, তারপর উইন্ডোতে **ODM** টেনে পাশের **Applications** ফোল্ডারে ছেড়ে দিন।
 3. ODM খুলুন। ODM Apple-এর notarization করা নয়, তাই প্রথমবার macOS আটকাতে পারে: **System Settings → Privacy & Security**-এ গিয়ে নিচে **Open Anyway** চাপুন।
 
 প্রথমবার চালু হলে ODM একটা **সেটআপ স্ক্রিন** দেখায়, যেখানে ভিডিও ডাউনলোডের দরকারি অংশগুলো নামে আর প্রতিটার অগ্রগতি দেখা যায়। শেষ হলে একটা **ধাপে ধাপে গাইড** Chrome এক্সটেনশন যুক্ত করতে সাহায্য করে।

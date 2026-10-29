@@ -51,8 +51,8 @@ Windows users have IDM. On macOS, browsers download each file over a single conn
 
 ## Installation
 
-1. Download **[ODM.zip](https://github.com/niruvai/odm/releases/latest)** from the latest release.
-2. Unzip it and move **ODM.app** to your **Applications** folder.
+1. Download **[ODM.dmg](https://github.com/niruvai/odm/releases/latest)** from the latest release.
+2. Open it and drag **ODM** onto the **Applications** folder in the window.
 3. Open ODM. Because ODM is not notarized by Apple, macOS may block the first launch: open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 
 On first launch, ODM shows a **setup screen** while it installs the components needed for video downloads, with the progress of each one. When it finishes, a **step-by-step guide** helps you connect the Chrome extension.
