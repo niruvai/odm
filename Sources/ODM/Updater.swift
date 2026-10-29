@@ -162,12 +162,32 @@ final class Updater: ObservableObject {
         guard p.terminationStatus == 0 else { throw DMError.message("Could not unpack the update.") }
     }
 
+    /// Where the update goes. Normally this app's own location. But when macOS runs ODM from a
+    /// read-only temporary copy (App Translocation: the app was opened straight from Downloads
+    /// without being moved), or the folder isn't writable, install into Applications instead.
+    static func installTarget() -> URL? {
+        let fm = FileManager.default
+        let current = Bundle.main.bundleURL
+        let translocated = current.path.contains("/AppTranslocation/")
+        if !translocated, fm.isWritableFile(atPath: current.deletingLastPathComponent().path) {
+            return current
+        }
+        let home = fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true)
+        for dir in [URL(fileURLWithPath: "/Applications", isDirectory: true), home] {
+            if !fm.fileExists(atPath: dir.path) {
+                try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            }
+            if fm.isWritableFile(atPath: dir.path) {
+                return dir.appendingPathComponent("ODM.app", isDirectory: true)
+            }
+        }
+        return nil
+    }
+
     /// Replaces this app with `newApp` after ODM quits, then opens it again.
     private func relaunch(into newApp: URL) {
-        let target = Bundle.main.bundleURL
-        let parent = target.deletingLastPathComponent()
-        guard FileManager.default.isWritableFile(atPath: parent.path) else {
-            state = .failed("ODM can't write to \(parent.path). Move ODM to Applications and try again.")
+        guard let target = Self.installTarget() else {
+            state = .failed("ODM can't write to the Applications folder. Drag ODM.app into Applications and try again.")
             return
         }
         let pid = ProcessInfo.processInfo.processIdentifier
