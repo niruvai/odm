@@ -32,7 +32,7 @@ final class DownloadEngine: NSObject, URLSessionDataDelegate {
     private let partURL: URL
     private let finalURL: URL
     private var totalBytes: Int64
-    private let resumable: Bool
+    private var resumable: Bool
     private let maxConnections: Int
     private var segments: [Segment]
     private let onEvent: (EngineEvent) -> Void
@@ -201,6 +201,43 @@ final class DownloadEngine: NSObject, URLSessionDataDelegate {
         task.resume()
     }
 
+    /// True when a 206 response's Content-Range starts where we asked and has the expected total.
+    static func rangeMatches(_ http: HTTPURLResponse, start: Int64, total: Int64) -> Bool {
+        guard let cr = http.value(forHTTPHeaderField: "Content-Range") else { return false }
+        // "bytes 1000-1999/5000"
+        let v = cr.trimmingCharacters(in: .whitespaces)
+        guard v.lowercased().hasPrefix("bytes"),
+              let dash = v.firstIndex(of: "-") else { return false }
+        let first = v[v.index(v.startIndex, offsetBy: 5)..<dash].trimmingCharacters(in: .whitespaces)
+        guard let got = Int64(first), got == start else { return false }
+        if total > 0, let slash = v.lastIndex(of: "/") {
+            let t = v[v.index(after: slash)...].trimmingCharacters(in: .whitespaces)
+            if t != "*", let n = Int64(t), n != total { return false }
+        }
+        return true
+    }
+
+    /// The server doesn't handle byte ranges correctly: throw away what was written and download
+    /// the file again from the start over a single connection, without ranges.
+    private func fallBackToSingleConnection() {
+        guard resumable, !stopped else { return }
+        resumable = false
+        let running = active.values.map { $0.task }
+        active.removeAll()          // their callbacks are ignored from now on
+        for t in running { t.cancel() }
+        taskErrors.removeAll()
+        retries.removeAll()
+        coolingDown.removeAll()
+        segments = [Segment(start: 0, end: totalBytes > 0 ? totalBytes - 1 : -1, downloaded: 0)]
+        do {
+            try fileHandle?.truncate(atOffset: 0)
+        } catch {
+            fail("Writing to disk failed: \(error.localizedDescription)")
+            return
+        }
+        launch(segment: 0, slot: 0)
+    }
+
     // MARK: URLSession delegate (runs on `queue`)
 
     func urlSession(_ session: URLSession, task: URLSessionTask,
@@ -220,15 +257,26 @@ final class DownloadEngine: NSObject, URLSessionDataDelegate {
                 completionHandler(.cancel)
                 return
             }
-            if resumable && http.statusCode != 206 {
-                // Server sent the whole file instead of our range. Only OK for a range starting at 0
-                // that covers the whole file.
+            if resumable {
                 let seg = segments[info.segment]
-                let wholeFile = seg.nextOffset == 0 && (seg.end < 0 || seg.end == totalBytes - 1)
-                if !wholeFile {
-                    taskErrors[id] = "range"
-                    completionHandler(.cancel)
-                    return
+                if http.statusCode == 206 {
+                    // Some servers answer 206 but send bytes from a different place than we asked
+                    // for (often from the start of the file). Writing those would corrupt the file,
+                    // so check the Content-Range against our request.
+                    if !Self.rangeMatches(http, start: seg.nextOffset, total: totalBytes) {
+                        completionHandler(.cancel)
+                        fallBackToSingleConnection()
+                        return
+                    }
+                } else {
+                    // Server sent the whole file instead of our range. Only OK for a range starting
+                    // at 0 that covers the whole file; otherwise download it over one connection.
+                    let wholeFile = seg.nextOffset == 0 && (seg.end < 0 || seg.end == totalBytes - 1)
+                    if !wholeFile {
+                        completionHandler(.cancel)
+                        fallBackToSingleConnection()
+                        return
+                    }
                 }
             }
         }
@@ -280,11 +328,6 @@ final class DownloadEngine: NSObject, URLSessionDataDelegate {
 
         if segments[idx].isComplete {
             if segments.allSatisfy({ $0.isComplete }) { finish() } else { fill() }
-            return
-        }
-
-        if headerProblem == "range" {
-            fail("The server stopped accepting multi-part requests. Try “Redownload”.")
             return
         }
 
