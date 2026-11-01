@@ -518,9 +518,9 @@ final class VideoEngine {
             args += ["--ffmpeg-location", ffmpeg, "--merge-output-format", "mp4"]
             if let h = height {
                 // Prefer H.264 + AAC so the file plays in QuickTime / on every device.
-                args += ["-f", "bv*[height<=\(h)]+ba/b[height<=\(h)]/bv*+ba/b", "-S", "vcodec:h264,res,acodec:m4a"]
+                args += ["-f", "bv*[height<=\(h)]+ba/b[height<=\(h)]/bv*+ba/b", "-S", "res,vcodec:h264,acodec:m4a"]
             } else {
-                args += ["-f", "bv*+ba/b"]
+                args += ["-f", "bv*+ba/b", "-S", "res,vcodec:h264,acodec:m4a"]
             }
         } else {
             // No ffmpeg: only formats that already contain video + audio in one file.

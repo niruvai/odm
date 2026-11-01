@@ -10,6 +10,7 @@ final class DownloadManager: ObservableObject {
 
     private var engines: [UUID: DownloadEngine] = [:]
     private var videoEngines: [UUID: VideoEngine] = [:]
+    private var converters: [UUID: VideoConverter] = [:]
     private var sleepActivity: NSObjectProtocol?
     private var lastSave = Date.distantPast
     private let storeURL = FileUtil.appSupportDir.appendingPathComponent("downloads.json")
@@ -231,6 +232,62 @@ final class DownloadManager: ObservableObject {
         }
     }
 
+    private func finishVideo(_ item: DownloadItem, file: URL) {
+        item.fileName = file.lastPathComponent
+        item.directory = file.deletingLastPathComponent().path
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.int64Value
+        item.totalBytes = size ?? max(item.totalBytes, 0)
+        item.segments = [Segment(start: 0, end: max(0, item.totalBytes - 1), downloaded: item.totalBytes)]
+        item.status = .completed
+        item.dateCompleted = Date()
+        item.speed = 0
+        item.connections = 0
+        item.stage = nil
+        timing(item, "completed")
+        changed()
+        notifyCompleted(item)
+        schedule()
+    }
+
+    /// Facebook and some YouTube qualities come as VP9/AV1 video or Opus audio, which editing
+    /// apps such as Premiere Pro can't import. Convert those to H.264 + AAC.
+    private func convertIfNeeded(_ file: URL, ffmpeg: String, for item: DownloadItem, token: UUID) {
+        item.status = .connecting
+        item.speed = 0
+        item.stage = "Checking video format…"
+        changed()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, weak item] in
+            let info = VideoConverter.inspect(ffmpeg: ffmpeg, file: file)
+            DispatchQueue.main.async {
+                guard let self = self, let item = item, item.runToken == token else { return }
+                guard let info = info, info.needsConversion else {
+                    self.finishVideo(item, file: file)
+                    return
+                }
+                self.timing(item, "converting \(info.videoCodec ?? "?")/\(info.audioCodec ?? "-")")
+                item.stage = "Converting for editing apps…"
+                let converter = VideoConverter(ffmpeg: ffmpeg, input: file, info: info)
+                self.converters[item.id] = converter
+                converter.run(progress: { [weak item] f in
+                    guard let item = item, item.runToken == token else { return }
+                    item.stage = "Converting for editing apps… \(Int(f * 100))%"
+                }, completion: { [weak self, weak item] result in
+                    guard let self = self, let item = item, item.runToken == token else { return }
+                    self.converters[item.id] = nil
+                    switch result {
+                    case .success(let converted):
+                        self.timing(item, "converted")
+                        self.finishVideo(item, file: converted)
+                    case .failure(let error):
+                        // Keep the original file: it plays fine, only some editors can't import it.
+                        self.timing(item, "convert failed: \(error.localizedDescription)")
+                        self.finishVideo(item, file: file)
+                    }
+                })
+            }
+        }
+    }
+
     private func timing(_ item: DownloadItem, _ what: String) {
         let id = String(item.id.uuidString.prefix(6))
         TimingLog.write(String(format: "[%@] +%5.1fs  %@", id, Date().timeIntervalSince(item.videoStartedAt), what))
@@ -265,20 +322,12 @@ final class DownloadManager: ObservableObject {
             item.connections = 1
         case .completed(let file):
             videoEngines[item.id] = nil
-            item.fileName = file.lastPathComponent
-            item.directory = file.deletingLastPathComponent().path
-            let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.int64Value
-            item.totalBytes = size ?? max(item.totalBytes, 0)
-            item.segments = [Segment(start: 0, end: max(0, item.totalBytes - 1), downloaded: item.totalBytes)]
-            item.status = .completed
-            item.dateCompleted = Date()
-            item.speed = 0
-            item.connections = 0
-            item.stage = nil
-            timing(item, "completed")
-            changed()
-            notifyCompleted(item)
-            schedule()
+            if item.videoQuality != "audio", Prefs.convertForEditing,
+               let ffmpeg = YtDlp.shared.ffmpegPath {
+                convertIfNeeded(file, ffmpeg: ffmpeg, for: item, token: token)
+                return
+            }
+            finishVideo(item, file: file)
         case .failed(let message):
             videoEngines[item.id] = nil
             timing(item, "failed: \(message)")
@@ -325,6 +374,7 @@ final class DownloadManager: ObservableObject {
     private func stopEngines(for item: DownloadItem) {
         engines.removeValue(forKey: item.id)?.stop()
         videoEngines.removeValue(forKey: item.id)?.stop()
+        converters.removeValue(forKey: item.id)?.cancel()
     }
 
     // MARK: File engine

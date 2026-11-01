@@ -353,6 +353,7 @@ struct ExtensionStatusLine: View {
 struct VideoSettingsView: View {
     @AppStorage(Prefs.videoQualityKey) private var quality = "1080"
     @AppStorage(Prefs.browserCookiesKey) private var useCookies = false
+    @AppStorage(Prefs.convertForEditingKey) private var convertForEditing = true
 
     var body: some View {
         Form {
@@ -361,6 +362,12 @@ struct VideoSettingsView: View {
                     Text(q.label).tag(q.id)
                 }
             }
+
+            Toggle("Make videos work in editing apps", isOn: $convertForEditing)
+            Text("Some sites, like Facebook, send videos in a format Premiere Pro, Final Cut and iMovie can't open. ODM converts those to standard MP4 (H.264) after downloading. Videos that are already compatible are not changed.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Toggle("Use my browser sign-in for videos", isOn: $useCookies)
             Text("Turn this on if a site says “confirm you're not a bot” or refuses the download. ODM then uses the sign-in the ODM Chrome extension sends when you press its Download button.")

@@ -14,6 +14,7 @@ enum Prefs {
     static let chromeGuideDoneKey = "chromeGuideDone"
     static let videoQualityKey = "defaultVideoQuality"
     static let browserCookiesKey = "videoUseChromeCookies"
+    static let convertForEditingKey = "convertVideosForEditing"
 
     static var defaultFolder: String {
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
@@ -30,6 +31,7 @@ enum Prefs {
             notifyKey: true,
             showProgressWindowKey: true,
             videoQualityKey: "1080",
+            convertForEditingKey: true,
         ])
     }
 
@@ -40,6 +42,7 @@ enum Prefs {
     static var showProgressWindow: Bool { UserDefaults.standard.bool(forKey: showProgressWindowKey) }
     static var videoQuality: String { UserDefaults.standard.string(forKey: videoQualityKey) ?? "1080" }
     static var useBrowserCookies: Bool { UserDefaults.standard.bool(forKey: browserCookiesKey) }
+    static var convertForEditing: Bool { UserDefaults.standard.bool(forKey: convertForEditingKey) }
     static var downloadFolder: String {
         let s = UserDefaults.standard.string(forKey: folderKey) ?? ""
         return s.isEmpty ? defaultFolder : (s as NSString).expandingTildeInPath
