@@ -137,6 +137,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 chrome.downloads.onCreated.addListener(async (item) => {
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url)) return; // blob:, data:, file: stay in Chrome
+  // When Chrome starts, it reports the downloads from its history (old, finished or failed ones)
+  // through this same event. Only take downloads that the user really just started.
+  if (item.state && item.state !== "in_progress") return;
+  const started = Date.parse(item.startTime || "");
+  if (!isNaN(started) && Date.now() - started > 60 * 1000) return;
   if (bypass.has(url)) {
     bypass.delete(url);
     return;

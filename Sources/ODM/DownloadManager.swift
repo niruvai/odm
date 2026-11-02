@@ -70,6 +70,11 @@ final class DownloadManager: ObservableObject {
     }
 
     func addFromBrowser(_ r: AddRequest) {
+        // The same link is already downloading or waiting: don't start it a second time
+        // (older extension versions re-sent Chrome's download history when Chrome restarted).
+        if items.contains(where: { $0.kind != .video && $0.url == r.url && ($0.status.isActive || $0.status == .queued) }) {
+            return
+        }
         var headers: [String: String] = [:]
         if let c = r.cookies, !c.isEmpty { headers["Cookie"] = c }
         if let ref = r.referrer, !ref.isEmpty { headers["Referer"] = ref }
