@@ -1,5 +1,5 @@
 # Builds ODM.app on every push to main and publishes it as a GitHub Release.
-# The app checks the latest release and offers "Update Now" to its users.
+# The app checks the latest release and offers "Update Now" to its users (it reads ODM.zip).
 name: Build & Release
 
 on:
