@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-15-intel   # Apple Silicon runners are often out of capacity; this still builds a universal app
     steps:
       - uses: actions/checkout@v4
         with:
