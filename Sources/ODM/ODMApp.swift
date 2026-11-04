@@ -22,6 +22,8 @@ struct ODMApp: App {
                     NotificationCenter.default.post(name: .showAddDownload, object: nil)
                 }
                 .keyboardShortcut("n")
+                Button("Paste and Download") { DownloadManager.shared.pasteAndDownload() }
+                    .keyboardShortcut("v", modifiers: [.command, .shift])
             }
             CommandMenu("Downloads") {
                 Button("Resume All") { DownloadManager.shared.resumeAll() }

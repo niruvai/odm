@@ -130,12 +130,19 @@ struct ContentView: View {
                     Text(manager.items.isEmpty ? "No downloads yet" : "Nothing here")
                         .font(.title3)
                     if manager.items.isEmpty {
-                        Text("Press ⌘N to add a link, drop a link onto this window,\nor install the Chrome extension from Settings.")
+                        Text("Copy a link and press ⇧⌘V, press ⌘N to add a link, drop a link onto this window,\nor install the Chrome extension from Settings.")
                             .multilineTextAlignment(.center)
                             .foregroundStyle(.secondary)
-                        Button("Add Download…") { ui.showAdd = true }
+                        HStack(spacing: 10) {
+                            Button {
+                                manager.pasteAndDownload()
+                            } label: {
+                                Label("Paste and Download", systemImage: "doc.on.clipboard")
+                            }
                             .buttonStyle(.borderedProminent)
-                            .padding(.top, 4)
+                            Button("Add Download…") { ui.showAdd = true }
+                        }
+                        .padding(.top, 4)
                     }
                 }
                 .padding()
@@ -173,6 +180,10 @@ struct ContentView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            Button { manager.pasteAndDownload() } label: {
+                Label("Paste and Download", systemImage: "doc.on.clipboard")
+            }
+            .help("Paste the copied link and start downloading (⇧⌘V)")
             Button { ui.showAdd = true } label: { Label("Add URL", systemImage: "plus") }
                 .help("Add a download (⌘N)")
             Button { for i in selectedItems { manager.resume(i) } } label: {

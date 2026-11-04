@@ -69,6 +69,39 @@ final class DownloadManager: ObservableObject {
         return item
     }
 
+    /// "Paste and Download": takes every link in the clipboard and starts it right away.
+    /// Video pages (YouTube, Facebook…) download as video in the default quality.
+    @discardableResult
+    func pasteAndDownload() -> Int {
+        let text = NSPasteboard.general.string(forType: .string) ?? ""
+        var links: [String] = []
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            for m in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                if let u = m.url, ["http", "https"].contains(u.scheme?.lowercased() ?? ""),
+                   !links.contains(u.absoluteString) {
+                    links.append(u.absoluteString)
+                }
+            }
+        }
+        var added = 0
+        for link in links {
+            // Already in the list and not finished: just make sure it runs.
+            if let existing = items.first(where: { $0.url == link && $0.status != .completed }) {
+                if !existing.status.isActive && existing.status != .queued { resume(existing) }
+                added += 1
+                continue
+            }
+            if add(urlString: link, startNow: true) != nil { added += 1 }
+        }
+        if added == 0 {
+            let alert = NSAlert()
+            alert.messageText = "No link in the clipboard"
+            alert.informativeText = "Copy a video or file link first (for example from YouTube or Facebook), then click Paste and Download."
+            alert.runModal()
+        }
+        return added
+    }
+
     func addFromBrowser(_ r: AddRequest) {
         // The same link is already downloading or waiting: don't start it a second time
         // (older extension versions re-sent Chrome's download history when Chrome restarted).

@@ -401,6 +401,10 @@ struct MenuBarView: View {
         }
         Divider()
         Button("Open ODM") { showMain() }
+        Button("Paste and Download") {
+            showMain()
+            manager.pasteAndDownload()
+        }
         Button("Add Download…") {
             showMain()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
