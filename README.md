@@ -170,7 +170,7 @@ build.sh                  builds, signs and installs ODM.app
 
 ## Contributing
 
-Bug reports and ideas are welcome in [Issues](https://github.com/niruvai/odm/issues). For security problems, please follow the [security policy](SECURITY.md) instead of opening a public issue.
+Bug reports and ideas are welcome in [Issues](https://github.com/niruvai/odm/issues). Pull requests are welcome too; read the [contributing guide](CONTRIBUTING.md) first. For security problems, please follow the [security policy](SECURITY.md) instead of opening a public issue.
 
 ## Acknowledgements
 
