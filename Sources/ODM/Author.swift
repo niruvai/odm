@@ -4,7 +4,8 @@ import AppKit
 /// Who made ODM. Shown in Settings → About and in the "About ODM" window.
 enum Author {
     static let name = "Nirob Islam"
-    static let website = URL(string: "https://www.nirobislam.com/en/")!
+    static let website = URL(string: "https://www.nirobislam.com/")!
+    static let email = URL(string: "mailto:nirob@nirobislam.com")!
     static let facebook = URL(string: "https://www.facebook.com/mdnurunnabiislamniroob")!
     static let instagram = URL(string: "https://www.instagram.com/niru_bhai_0/")!
     static let github = URL(string: "https://github.com/niruvai/odm")!
@@ -40,6 +41,8 @@ enum Author {
         add("Instagram", link: instagram)
         add("  ·  ")
         add("GitHub", link: github)
+        add("  ·  ")
+        add("Email", link: email)
 
         NSApplication.shared.orderFrontStandardAboutPanel(options: [
             .applicationName: "ODM",
@@ -81,6 +84,7 @@ struct AboutView: View {
                 linkButton("Facebook", "person.2.fill", Author.facebook)
                 linkButton("Instagram", "camera.fill", Author.instagram)
                 linkButton("GitHub", "chevron.left.forwardslash.chevron.right", Author.github)
+                linkButton("Email", "envelope.fill", Author.email)
             }
 
             UpdateStatusView()
