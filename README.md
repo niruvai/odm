@@ -180,7 +180,7 @@ Video downloads are powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlic
 
 **ODM is made by [Nirob Islam](https://www.nirobislam.com/en/).**
 
-[Website](https://www.nirobislam.com/en/) · [Facebook](https://www.facebook.com/mdnurunnabiislamniroob) · [Instagram](https://www.instagram.com/niru_bhai_0/)
+[Website](https://www.nirobislam.com/) · [Email](mailto:nirob@nirobislam.com) · [Facebook](https://www.facebook.com/mdnurunnabiislamniroob) · [Instagram](https://www.instagram.com/niru_bhai_0/)
 
 ## License
 
