@@ -97,7 +97,10 @@ final class Updater: ObservableObject {
         let title = json["name"] as? String ?? "ODM build \(build)"
         let notes = (json["body"] as? String ?? "")
             .components(separatedBy: "\n")
-            .filter { !$0.hasPrefix("Co-Authored-By") && !$0.hasPrefix("Claude-Session") }
+            .filter {
+                let line = $0.trimmingCharacters(in: .whitespaces).lowercased()
+                return !line.hasPrefix("co-authored-by") && !line.hasPrefix("claude-session")
+            }
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let page = (json["html_url"] as? String).flatMap(URL.init(string:))

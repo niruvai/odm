@@ -43,6 +43,8 @@ enum Author {
         add("GitHub", link: github)
         add("  ·  ")
         add("Email", link: email)
+        add("\n")
+        add("Join the ODM Telegram channel", link: Telegram.channel)
 
         NSApplication.shared.orderFrontStandardAboutPanel(options: [
             .applicationName: "ODM",
@@ -86,6 +88,14 @@ struct AboutView: View {
                 linkButton("GitHub", "chevron.left.forwardslash.chevron.right", Author.github)
                 linkButton("Email", "envelope.fill", Author.email)
             }
+
+            Button {
+                Telegram.open()
+            } label: {
+                Label("Join the ODM Telegram Channel", systemImage: "paperplane.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .help(Telegram.channel.absoluteString)
 
             UpdateStatusView()
 

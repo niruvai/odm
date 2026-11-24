@@ -11,6 +11,7 @@ final class UIState: ObservableObject {
     @Published var showAdd = false
     @Published var search = ""
     @Published var confirmDelete = false
+    @Published var showTelegram = false     // one-time Telegram channel invitation
 
     // Add Download dialog
     @Published var addLinks = ""

@@ -316,7 +316,7 @@ struct SettingsView: View {
             AboutView()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 560, height: 400)
+        .frame(width: 560, height: 440)
     }
 
     private func chooseFolder() {
@@ -414,6 +414,8 @@ struct MenuBarView: View {
         Divider()
         Button("Resume All") { manager.resumeAll() }
         Button("Pause All") { manager.pauseAll() }
+        Divider()
+        Button("Join Telegram Channel") { Telegram.open() }
         Divider()
         Button("Quit ODM") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")

@@ -26,6 +26,9 @@ struct ContentView: View {
                 }
             }
             .navigationTitle(title)
+            .sheet(isPresented: $ui.showTelegram) {
+                TelegramPromptView()
+            }
         }
         .toolbar { toolbarContent }
         .searchable(text: $ui.search, placement: .toolbar, prompt: "Search downloads")
@@ -33,6 +36,7 @@ struct ContentView: View {
             AddDownloadView().environmentObject(manager)
         }
         .onReceive(NotificationCenter.default.publisher(for: .showAddDownload)) { _ in ui.showAdd = true }
+        .onAppear { Telegram.showPromptIfNeeded() }
         .confirmationDialog("Delete \(selectedItems.count) download(s)?", isPresented: $ui.confirmDelete) {
             Button("Remove from List") { manager.remove(selectedItems, deleteFiles: false); ui.selection.removeAll() }
             Button("Remove and Move Files to Trash", role: .destructive) {

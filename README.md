@@ -168,6 +168,10 @@ build.sh                  builds, signs and installs ODM.app
 ```
 </details>
 
+## Community
+
+Join the official **[ODM Telegram channel](https://t.me/+LsTZONGm-082MmI1)** for new releases, announcements and help. If you run into a problem, you can ask there too.
+
 ## Contributing
 
 Bug reports and ideas are welcome in [Issues](https://github.com/niruvai/odm/issues). Pull requests are welcome too; read the [contributing guide](CONTRIBUTING.md) first. For security problems, please follow the [security policy](SECURITY.md) instead of opening a public issue.

@@ -16,6 +16,7 @@ struct ODMApp: App {
             CommandGroup(replacing: .appInfo) {
                 Button("About ODM") { Author.showAboutPanel() }
                 Button("Check for Updates…") { Updater.shared.check(userInitiated: true) }
+                Button("Join Telegram Channel…") { Telegram.open() }
             }
             CommandGroup(replacing: .newItem) {
                 Button("Add Download…") {
@@ -24,6 +25,10 @@ struct ODMApp: App {
                 .keyboardShortcut("n")
                 Button("Paste and Download") { DownloadManager.shared.pasteAndDownload() }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
+            }
+            CommandGroup(replacing: .help) {
+                Button("ODM Telegram Channel") { Telegram.open() }
+                Button("Report a Problem on GitHub") { NSWorkspace.shared.open(URL(string: "https://github.com/niruvai/odm/issues")!) }
             }
             CommandMenu("Downloads") {
                 Button("Resume All") { DownloadManager.shared.resumeAll() }
