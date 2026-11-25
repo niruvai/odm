@@ -354,6 +354,7 @@ struct VideoSettingsView: View {
     @AppStorage(Prefs.videoQualityKey) private var quality = "1080"
     @AppStorage(Prefs.browserCookiesKey) private var useCookies = false
     @AppStorage(Prefs.convertForEditingKey) private var convertForEditing = true
+    @ObservedObject private var tools = YtDlp.shared
 
     var body: some View {
         Form {
@@ -362,6 +363,21 @@ struct VideoSettingsView: View {
                     Text(q.label).tag(q.id)
                 }
             }
+
+            HStack(spacing: 10) {
+                Button("Update Video Tools") { tools.install() }
+                    .disabled(tools.status != nil)
+                if let status = tools.status {
+                    ProgressView().controlSize(.small)
+                    Text(status).font(.caption).foregroundStyle(.secondary)
+                } else if let v = tools.version {
+                    Text("yt-dlp \(v)").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Text("If YouTube videos fail with “Requested format is not available”, update the video tools and press Resume.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Toggle("Make videos work in editing apps", isOn: $convertForEditing)
             Text("Some sites, like Facebook, send videos in a format Premiere Pro, Final Cut and iMovie can't open. ODM converts those to standard MP4 (H.264) after downloading. Videos that are already compatible are not changed.")

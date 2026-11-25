@@ -496,7 +496,8 @@ final class VideoEngine {
     private var lastProgress = Date.distantPast
 
     init(binary: URL, pageURL: String, directory: String, quality: String, connections: Int,
-         ffmpeg: String?, searchPath: String, extraArgs: [String] = [], infoJSON: URL? = nil,
+         ffmpeg: String?, searchPath: String, extraArgs: [String] = [], useCookies: Bool = true,
+         infoJSON: URL? = nil,
          onEvent: @escaping (VideoEvent) -> Void) {
         self.onEvent = onEvent
 
@@ -526,7 +527,7 @@ final class VideoEngine {
             // No ffmpeg: only formats that already contain video + audio in one file.
             args += ["-f", height.map { "b[height<=\($0)]/b" } ?? "b"]
         }
-        args += YtDlp.cookieArgs(for: pageURL)
+        if useCookies { args += YtDlp.cookieArgs(for: pageURL) }
         args += extraArgs
         if let info = infoJSON {
             // Video info was already fetched in the background: skip the slow extraction step.

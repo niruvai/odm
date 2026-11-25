@@ -214,7 +214,8 @@ final class DownloadManager: ObservableObject {
         }
         changed()
 
-        // Attempt 0: normal. 1: after a 403, refresh yt-dlp. 2: also try other YouTube player clients.
+        // Attempt 0: normal. 1: after a 403 / no formats, refresh yt-dlp. 2: also try other YouTube
+        // player clients. 3: no formats even then, so try without the browser sign-in.
         let attempt = item.videoAttempt
         YtDlp.shared.prepare(forceUpdate: attempt == 1) { [weak self, weak item] result in
             guard let item = item else { return }
@@ -249,6 +250,7 @@ final class DownloadManager: ObservableObject {
                         quality: item.videoQuality, connections: Prefs.connections,
                         ffmpeg: YtDlp.shared.ffmpegPath, searchPath: YtDlp.shared.searchPath,
                         extraArgs: attempt >= 2 ? ["--extractor-args", "youtube:player_client=default,tv,web_safari,android"] : [],
+                        useCookies: attempt < 3,
                         infoJSON: info
                     ) { [weak self, weak item] event in
                         DispatchQueue.main.async {
@@ -377,18 +379,32 @@ final class DownloadManager: ObservableObject {
                 startVideo(item)
                 return
             }
-            // YouTube often answers 403 when yt-dlp is out of date or a player client is blocked:
-            // retry automatically before giving up.
-            if message.contains("403"), item.videoAttempt < 2 {
+            let lower = message.lowercased()
+            // "Requested format is not available": YouTube handed yt-dlp no playable formats, usually
+            // because yt-dlp is out of date, a player client is blocked, or the signed-in session is limited.
+            let noFormats = lower.contains("requested format is not available")
+                || lower.contains("only images are available")
+                || lower.contains("no video formats found")
+            // YouTube often answers 403 (or offers no formats) when yt-dlp is out of date or a player
+            // client is blocked: retry automatically before giving up.
+            if message.contains("403") || noFormats, item.videoAttempt < 2 {
                 item.videoAttempt += 1
                 item.status = .paused   // so startVideo's state checks pass
                 startVideo(item)
                 return
             }
+            // Still no formats with browser sign-in on: YouTube may be limiting that account. Try once without it.
+            if noFormats, item.videoAttempt == 2, Prefs.useBrowserCookies {
+                item.videoAttempt = 3
+                item.status = .paused
+                startVideo(item)
+                return
+            }
             item.status = .failed
             item.stage = nil
-            let lower = message.lowercased()
-            if lower.contains("could not find chrome cookies") || lower.contains("cookies database") {
+            if noFormats {
+                item.errorMessage = "YouTube didn't offer a downloadable version of this video. Open Settings → Video and press “Update Video Tools”, then press Resume. If it still fails, the video may be private, members-only or blocked in your country."
+            } else if lower.contains("could not find chrome cookies") || lower.contains("cookies database") {
                 item.errorMessage = "ODM couldn't read Chrome's cookies directly. Open this video in Chrome and press ODM's Download button on the video (or “Download video” in the extension) — that passes your YouTube sign-in to ODM."
             } else if lower.contains("not a bot") || lower.contains("sign in to confirm") {
                 item.errorMessage = Prefs.useBrowserCookies
